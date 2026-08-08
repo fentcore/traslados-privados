@@ -12,7 +12,7 @@
 
   const root = document.getElementById('root');
 
-  const emptyForm = () => ({ nombre: '', barrio: '', tramos: '', mail: '', telefono: '', monto: '', estado: 'pendiente', fecha: '', tipoViaje: 'ambos', dias: [] });
+  const emptyForm = () => ({ nombre: '', barrio: '', tramos: '', mail: '', telefono: '', monto: '', estado: 'pendiente', fecha: '', tipoViaje: 'ambos', dias: [], horarioIda: '', horarioVuelta: '' });
 
   const state = {
     screen: 'loading', // loading | auth | app
@@ -35,6 +35,7 @@
     savedFlash: false,
     editingContact: null,
     deletingContact: null,
+    viewingContact: null,
     accountOpen: false,
     deferredInstallPrompt: null,
     pushState: 'unknown', // unknown | unsupported | default | denied | subscribed
@@ -146,6 +147,7 @@
     </div>
     ${state.editingContact ? renderEditDialog() : ''}
     ${state.deletingContact ? renderDeleteDialog() : ''}
+    ${state.viewingContact ? renderDetailDialog() : ''}
     ${state.accountOpen ? renderAccountDialog() : ''}`;
   }
 
@@ -210,6 +212,10 @@
             ${DIAS.map(d => `<button type="button" class="day-circle ${f.dias.includes(d.key) ? 'active' : ''}" data-action="toggle-dia" data-key="${d.key}">${d.label}</button>`).join('')}
           </div>
         </div>
+        <div style="display:flex;gap:12px">
+          <div class="field" style="flex:1"><label>Horario de ida</label><input id="f-horario-ida" type="time" class="input" data-bind="form.horarioIda" value="${esc(f.horarioIda)}" /></div>
+          <div class="field" style="flex:1"><label>Horario de vuelta</label><input id="f-horario-vuelta" type="time" class="input" data-bind="form.horarioVuelta" value="${esc(f.horarioVuelta)}" /></div>
+        </div>
         <div class="field"><label>Tipo de viaje</label><div class="seg">
           ${segOpt('form', 'tipoViaje', 'ida', 'Ida', f.tipoViaje)}
           ${segOpt('form', 'tipoViaje', 'vuelta', 'Vuelta', f.tipoViaje)}
@@ -240,6 +246,10 @@
           <div style="min-width:0">
             <div class="name">${esc(c.nombre)}</div>
             <div class="barrio">${esc(c.barrio)}</div>
+            <div class="text-muted" style="font-size:11.5px;margin-top:2px">
+              ${c.dias && c.dias.length ? esc(diasLabel(c.dias)) : 'Sin días asignados'}
+              ${(c.horarioIda || c.horarioVuelta) ? ' · ' + esc(c.horarioIda || '—') + ' / ' + esc(c.horarioVuelta || '—') : ''}
+            </div>
           </div>
           <div class="stepper">
             <button type="button" data-action="adjust-tramos" data-id="${c.id}" data-delta="-1">&minus;</button>
@@ -324,7 +334,7 @@
           </tr></thead>
           <tbody>
             ${rows.map(c => `
-            <tr>
+            <tr data-action="view-contact" data-id="${c.id}" style="cursor:pointer">
               <td style="font-weight:500;white-space:nowrap">${esc(c.nombre)}</td>
               <td style="white-space:nowrap">${esc(c.barrio)}</td>
               <td style="text-align:center">${c.tramos}</td>
@@ -367,6 +377,10 @@
             ${DIAS.map(d => `<button type="button" class="day-circle ${(ec.dias || []).includes(d.key) ? 'active' : ''}" data-action="toggle-dia-edit" data-key="${d.key}">${d.label}</button>`).join('')}
           </div>
         </div>
+        <div style="display:flex;gap:12px">
+          <div class="field" style="flex:1"><label>Horario de ida</label><input id="e-horario-ida" type="time" class="input" data-bind="editingContact.horarioIda" value="${esc(ec.horarioIda)}" /></div>
+          <div class="field" style="flex:1"><label>Horario de vuelta</label><input id="e-horario-vuelta" type="time" class="input" data-bind="editingContact.horarioVuelta" value="${esc(ec.horarioVuelta)}" /></div>
+        </div>
         <div class="field"><label>Tipo de viaje</label><div class="seg">
           ${segOpt('edit', 'tipoViaje', 'ida', 'Ida', ec.tipoViaje)}
           ${segOpt('edit', 'tipoViaje', 'vuelta', 'Vuelta', ec.tipoViaje)}
@@ -382,6 +396,35 @@
           <button type="submit" class="btn btn-primary">Guardar cambios</button>
         </div>
       </form>
+    </div>`;
+  }
+
+  function renderDetailDialog() {
+    const c = state.viewingContact;
+    const row = (label, value) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--color-divider);font-size:13.5px"><span class="text-muted">${esc(label)}</span><span style="font-weight:500;text-align:right">${value}</span></div>`;
+    return `
+    <div class="dialog-backdrop">
+      <div class="dialog blueprint">
+        ${corners()}
+        <div class="dialog-title">${esc(c.nombre)}</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          ${row('Barrio', esc(c.barrio) || '—')}
+          ${row('Tramos', c.tramos)}
+          ${row('Monto abonado', fmtMoney(c.monto))}
+          ${row('Estado', c.estado === 'pagado' ? 'Pagado' : 'Pendiente')}
+          ${row('Email', esc(c.mail) || '—')}
+          ${row('Teléfono', esc(c.telefono) || '—')}
+          ${row('Fecha', fmtFecha(c.fecha))}
+          ${row('Tipo de viaje', tipoLabel(c.tipoViaje))}
+          ${row('Días de traslado', c.dias && c.dias.length ? esc(diasLabel(c.dias)) : 'Sin días asignados')}
+          ${row('Horario de ida', esc(c.horarioIda) || '—')}
+          ${row('Horario de vuelta', esc(c.horarioVuelta) || '—')}
+        </div>
+        <div class="dialog-actions">
+          <button type="button" data-action="close-detail" class="btn btn-secondary">Cerrar</button>
+          <button type="button" data-action="edit-from-detail" data-id="${c.id}" class="btn btn-primary">Editar</button>
+        </div>
+      </div>
     </div>`;
   }
 
@@ -444,6 +487,13 @@
     const c = state.contacts.find(x => String(x.id) === String(id));
     if (!c) return;
     state.deletingContact = c;
+    render();
+  }
+
+  function openView(id) {
+    const c = state.contacts.find(x => String(x.id) === String(id));
+    if (!c) return;
+    state.viewingContact = c;
     render();
   }
 
@@ -684,6 +734,9 @@
       case 'delete-contact': openDelete(btn.dataset.id); break;
       case 'cancel-delete': state.deletingContact = null; render(); break;
       case 'confirm-delete': confirmDelete(); break;
+      case 'view-contact': openView(btn.dataset.id); break;
+      case 'close-detail': state.viewingContact = null; render(); break;
+      case 'edit-from-detail': state.viewingContact = null; openEdit(btn.dataset.id); break;
       case 'toggle-estado': toggleEstado(btn.dataset.id); break;
       case 'adjust-tramos': adjustTramos(btn.dataset.id, Number(btn.dataset.delta)); break;
       case 'sort': setSort(btn.dataset.key); break;
@@ -705,7 +758,7 @@
     }
   });
 
-  const NO_RERENDER_FIELDS = ['nombre', 'barrio', 'mail', 'telefono', 'tramos', 'monto'];
+  const NO_RERENDER_FIELDS = ['nombre', 'barrio', 'mail', 'telefono', 'tramos', 'monto', 'horarioIda', 'horarioVuelta'];
   root.addEventListener('input', (e) => {
     const bind = e.target.dataset.bind;
     if (!bind) return;

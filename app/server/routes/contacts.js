@@ -23,6 +23,8 @@ function serialize(row) {
     fecha: row.fecha ? new Date(row.fecha).toISOString().slice(0, 10) : '',
     tipoViaje: row.tipo_viaje || 'ambos',
     dias: Array.isArray(row.dias) ? row.dias : [],
+    horarioIda: row.horario_ida || '',
+    horarioVuelta: row.horario_vuelta || '',
     createdBy: row.created_by,
     updatedAt: row.updated_at
   };
@@ -40,7 +42,9 @@ function sanitizeInput(body) {
     estado: ESTADO_VALID.has(body.estado) ? body.estado : 'pendiente',
     fecha: body.fecha ? String(body.fecha).slice(0, 10) : null,
     tipoViaje: TIPO_VALID.has(body.tipoViaje) ? body.tipoViaje : 'ambos',
-    dias
+    dias,
+    horarioIda: String(body.horarioIda || '').trim().slice(0, 5),
+    horarioVuelta: String(body.horarioVuelta || '').trim().slice(0, 5)
   };
 }
 
@@ -72,9 +76,9 @@ router.post('/', async (req, res) => {
   if (!data.nombre) return res.status(400).json({ error: 'El nombre es obligatorio.' });
   try {
     const { rows } = await pool.query(
-      `INSERT INTO contacts (workspace_id, nombre, barrio, tramos, mail, telefono, monto, estado, fecha, tipo_viaje, dias, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
-      [req.workspaceId, data.nombre, data.barrio, data.tramos, data.mail, data.telefono, data.monto, data.estado, data.fecha, data.tipoViaje, JSON.stringify(data.dias), req.userId]
+      `INSERT INTO contacts (workspace_id, nombre, barrio, tramos, mail, telefono, monto, estado, fecha, tipo_viaje, dias, horario_ida, horario_vuelta, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
+      [req.workspaceId, data.nombre, data.barrio, data.tramos, data.mail, data.telefono, data.monto, data.estado, data.fecha, data.tipoViaje, JSON.stringify(data.dias), data.horarioIda, data.horarioVuelta, req.userId]
     );
     const contact = rows[0];
     res.status(201).json({ contact: serialize(contact) });
@@ -96,9 +100,9 @@ router.put('/:id', async (req, res) => {
   if (!data.nombre) return res.status(400).json({ error: 'El nombre es obligatorio.' });
   try {
     const { rows } = await pool.query(
-      `UPDATE contacts SET nombre=$1, barrio=$2, tramos=$3, mail=$4, telefono=$5, monto=$6, estado=$7, fecha=$8, tipo_viaje=$9, dias=$10, updated_at=now()
-       WHERE id=$11 AND workspace_id=$12 RETURNING *`,
-      [data.nombre, data.barrio, data.tramos, data.mail, data.telefono, data.monto, data.estado, data.fecha, data.tipoViaje, JSON.stringify(data.dias), req.params.id, req.workspaceId]
+      `UPDATE contacts SET nombre=$1, barrio=$2, tramos=$3, mail=$4, telefono=$5, monto=$6, estado=$7, fecha=$8, tipo_viaje=$9, dias=$10, horario_ida=$11, horario_vuelta=$12, updated_at=now()
+       WHERE id=$13 AND workspace_id=$14 RETURNING *`,
+      [data.nombre, data.barrio, data.tramos, data.mail, data.telefono, data.monto, data.estado, data.fecha, data.tipoViaje, JSON.stringify(data.dias), data.horarioIda, data.horarioVuelta, req.params.id, req.workspaceId]
     );
     if (!rows.length) return res.status(404).json({ error: 'Contacto no encontrado.' });
     res.json({ contact: serialize(rows[0]) });

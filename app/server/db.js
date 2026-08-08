@@ -35,10 +35,15 @@ CREATE TABLE IF NOT EXISTS contacts (
   fecha DATE,
   tipo_viaje TEXT DEFAULT 'ambos',
   dias JSONB DEFAULT '[]'::jsonb,
+  horario_ida TEXT DEFAULT '',
+  horario_vuelta TEXT DEFAULT '',
   created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS horario_ida TEXT DEFAULT '';
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS horario_vuelta TEXT DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS push_subscriptions (
   id SERIAL PRIMARY KEY,
