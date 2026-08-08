@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;700&family=Barlow+Condensed:wght@400;600&display=swap">
+<link rel="stylesheet" href="_ds/industry-af6c7967-63ac-4537-9519-646dfcb63756/styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#5980a6">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  body { margin: 0; background: #d8d9da; }
+  *, *::before, *::after { box-sizing: border-box; }
+</style>
+</helmet>
+<div style="min-height:100vh;width:100%;max-width:480px;margin:0 auto;background:#f2f2f3;font-family:'Barlow',system-ui,sans-serif;color:#1d1f20;display:flex;flex-direction:column;box-shadow:0 12px 32px rgba(43,43,45,.22)">
+
+  <div style="display:flex;align-items:center;gap:11px;padding:16px;border-bottom:1px solid rgba(29,31,32,.16)">
+    <div style="width:34px;height:34px;flex:none;border:1px solid #5980a6;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:600;color:#5980a6;font-size:17px">T</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:19px;line-height:1.15">Traslados Privados</div>
+      <div style="font-size:11px;color:rgba(29,31,32,.55)">Carga de clientes de traslado</div>
+    </div>
+    <button onClick="{{ openSync }}" style="flex:none;border:1px solid rgba(29,31,32,.16);background:transparent;cursor:pointer;padding:7px 10px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:11.5px;color:#1d1f20" style-hover="background:rgba(29,31,32,.06)">Sincronizar</button>
+  </div>
+
+  <div style="display:flex;margin:16px 16px 0;border:1px solid rgba(29,31,32,.16)">
+    <button onClick="{{ goForm }}" style="flex:1;border:none;cursor:pointer;padding:9px 8px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:14px;background:{{ tabFormBg }};color:{{ tabFormFg }}" style-hover="background:rgba(29,31,32,.05)">Nuevo cliente</button>
+    <button onClick="{{ goTramos }}" style="flex:1;border:none;border-left:1px solid rgba(29,31,32,.16);cursor:pointer;padding:9px 8px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:14px;background:{{ tabTramosBg }};color:{{ tabTramosFg }}" style-hover="background:rgba(29,31,32,.05)">Tramos</button>
+    <button onClick="{{ goList }}" style="flex:1;border:none;border-left:1px solid rgba(29,31,32,.16);cursor:pointer;padding:9px 8px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:14px;background:{{ tabListBg }};color:{{ tabListFg }}" style-hover="background:rgba(29,31,32,.05)">Contactos ({{ contactsCount }})</button>
+  </div>
+
+  <sc-if value="{{ isFormView }}" hint-placeholder-val="{{ true }}">
+    <form onSubmit="{{ submitForm }}" style="position:relative;margin:16px;padding:18px 16px;border:1px solid rgba(29,31,32,.16);display:flex;flex-direction:column;gap:14px">
+      <i style="position:absolute;width:11px;height:11px;top:-6px;left:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+      <i style="position:absolute;width:11px;height:11px;top:-6px;right:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+      <i style="position:absolute;width:11px;height:11px;bottom:-6px;left:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+      <i style="position:absolute;width:11px;height:11px;bottom:-6px;right:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:20px">Nuevo cliente</div>
+
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <label style="font-size:12px;color:rgba(29,31,32,.7)">Nombre y apellido</label>
+        <input required="" value="{{ form.nombre }}" onChange="{{ onNombreChange }}" placeholder="Ej: Martina Ibáñez" style="width:100%;min-height:38px;padding:6px 10px;font:inherit;font-size:14px;color:#1d1f20;background:#e9e9ea;border:1px solid rgba(29,31,32,.16);border-radius:0" style-focus="border-color:#5980a6;outline:none" />
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <label style="font-size:12px;color:rgba(29,31,32,.7)">Barrio</label>
+        <input value="{{ form.barrio }}" onChange="{{ onBarrioChange }}" placeholder="Ej: Nordelta" style="width:100%;min-height:38px;padding:6px 10px;font:inherit;font-size:14px;color:#1d1f20;background:#e9e9ea;border:1px solid rgba(29,31,32,.16);border-radius:0" style-focus="border-color:#5980a6;outline:none" />
+      </div>
+
+      <div style="display:flex;gap:12px">
+        <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+          <label style="font-size:12px;color:rgba(29,31,32,.7)">Cantidad de tramos</label>
+          <input type="number" min="0" value="{{ form.tramos }}" onChange="{{ onTramosChange }}" placeholder="0" style="width:100%;min-height:38px;padding:6px 10px;font:inherit;font-size:14px;color:#1d1f20;background:#e9e9ea;border:1px solid rgba(29,31,32,.16);border-radius:0" style-focus="border-color:#5980a6;outline:none" />
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+          <label style="font-size:12px;color:rgba(29,31,32,.7)">Monto abonado</label>
+          <div style="position:relative">
+            <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:rgba(29,31,32,.55)">$</span>
+            <input type="number" min="0" step="any" value="{{ form.monto }}" onChange="{{ onMontoChange }}" placeholder="0" style="width:100%;min-height:38px;padding:6px 10px 6px 24px;font:inherit;font-size:14px;color:#1d1f20;background:#e9e9ea;border:1px solid rgba(29,31,32,.16);border-radius:0" style-focus="border-color:#5980a6;outline:none" />
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <label style="font-size:12px;color:rgba(29,31,32,.7)">Email</label>
+        <input type="email" value="{{ form.mail }}" onChange="{{ onMailChange }}" placeholder="nombre@mail.com" style="width:100%;min-height:38px;padding:6px 10px;font:inherit;font-size:14px;color:#1d1f20;background:#e9e9ea;border:1px solid rgba(29,31,32,.16);border-radius:0" style-focus="border-color:#5980a6;outline:none" />
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <label style="font-size:12px;color:rgba(29,31,32,.7)">Teléfono</label>
+        <input type="tel" value="{{ form.telefono }}" onChange="{{ onTelefonoChange }}" placeholder="11 1234-5678" style="width:100%;min-height:38px;padding:6px 10px;font:inherit;font-size:14px;color:#1d1f20;background:#e9e9ea;border:1px solid rgba(29,31,32,.16);border-radius:0" style-focus="border-color:#5980a6;outline:none" />
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <label style="font-size:12px;color:rgba(29,31,32,.7)">Fecha</label>
+        <input type="date" value="{{ form.fecha }}" onChange="{{ onFechaChange }}" style="width:100%;min-height:38px;padding:6px 10px;font:inherit;font-size:14px;color:#1d1f20;background:#e9e9ea;border:1px solid rgba(29,31,32,.16);border-radius:0" style-focus="border-color:#5980a6;outline:none" />
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <label style="font-size:12px;color:rgba(29,31,32,.7)">Días de traslado</label>
+        <div style="display:flex;gap:8px">
+          <sc-for list="{{ diasOptions }}" as="d" hint-placeholder-count="5">
+            <button type="button" onClick="{{ d.onToggle }}" style="width:36px;height:36px;border-radius:50%;border:1px solid #5980a6;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:14px;background:{{ d.bg }};color:{{ d.fg }}">{{ d.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <label style="font-size:12px;color:rgba(29,31,32,.7)">Tipo de viaje</label>
+        <div style="display:flex;border:1px solid rgba(29,31,32,.16)">
+          <button type="button" onClick="{{ setTipoIda }}" style="flex:1;border:none;cursor:pointer;padding:8px;font-size:12.5px;background:{{ tipoIdaBg }};color:{{ tipoIdaFg }}">Ida</button>
+          <button type="button" onClick="{{ setTipoVuelta }}" style="flex:1;border:none;border-left:1px solid rgba(29,31,32,.16);cursor:pointer;padding:8px;font-size:12.5px;background:{{ tipoVueltaBg }};color:{{ tipoVueltaFg }}">Vuelta</button>
+          <button type="button" onClick="{{ setTipoAmbos }}" style="flex:1;border:none;border-left:1px solid rgba(29,31,32,.16);cursor:pointer;padding:8px;font-size:12.5px;background:{{ tipoAmbosBg }};color:{{ tipoAmbosFg }}">Ambos</button>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <label style="font-size:12px;color:rgba(29,31,32,.7)">Estado</label>
+        <div style="display:flex;border:1px solid rgba(29,31,32,.16)">
+          <button type="button" onClick="{{ setEstadoPendiente }}" style="flex:1;border:none;cursor:pointer;padding:8px;font-size:13px;background:{{ estadoPendienteBg }};color:{{ estadoPendienteFg }}">Pendiente</button>
+          <button type="button" onClick="{{ setEstadoPagado }}" style="flex:1;border:none;border-left:1px solid rgba(29,31,32,.16);cursor:pointer;padding:8px;font-size:13px;background:{{ estadoPagadoBg }};color:{{ estadoPagadoFg }}">Pagado</button>
+        </div>
+      </div>
+
+      <sc-if value="{{ savedFlash }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:12.5px;color:#416180;background:#eef6ff;border:1px solid #5980a6;padding:8px 10px">Cliente guardado correctamente.</div>
+      </sc-if>
+
+      <button type="submit" style="position:relative;overflow:visible;border:1px solid #5980a6;cursor:pointer;padding:11px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:15px;background:#5980a6;color:#f2f2f3" style-hover="background:#597ea3" style-active="background:#416180">Guardar cliente</button>
+    </form>
+  </sc-if>
+
+  <sc-if value="{{ isTramosView }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:20px">Tramos por cliente</div>
+        <div style="font-size:12.5px;color:rgba(29,31,32,.6)">Ajustá con + y − la cantidad de tramos contratados por cada cliente.</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ tramosRows }}" as="c" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid rgba(29,31,32,.16)">
+            <div style="min-width:0">
+              <div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.nombre }}</div>
+              <div style="font-size:11.5px;color:rgba(29,31,32,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.barrio }}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0;border:1px solid rgba(29,31,32,.16);flex:none">
+              <button onClick="{{ c.onDec }}" style="width:32px;height:32px;border:none;background:transparent;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:16px;color:#1d1f20" style-hover="background:rgba(29,31,32,.06)">−</button>
+              <div style="width:38px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:15px;border-left:1px solid rgba(29,31,32,.16);border-right:1px solid rgba(29,31,32,.16);padding:6px 0">{{ c.tramos }}</div>
+              <button onClick="{{ c.onInc }}" style="width:32px;height:32px;border:none;background:transparent;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:16px;color:#1d1f20" style-hover="background:rgba(29,31,32,.06)">+</button>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ hasRowsInverted }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align:center;font-size:13px;color:rgba(29,31,32,.55);padding:10px 0">Todavía no cargaste clientes.</div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isListView }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
+
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:20px">Contactos</div>
+        <button onClick="{{ exportExcel }}" style="border:1px solid rgba(29,31,32,.16);background:transparent;cursor:pointer;padding:7px 12px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:12.5px;color:#1d1f20" style-hover="background:rgba(29,31,32,.06)">Exportar Excel</button>
+      </div>
+
+      <sc-if value="{{ canInstall }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ installApp }}" style="border:1px solid #5980a6;background:#5980a6;cursor:pointer;padding:9px 12px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:13px;color:#f2f2f3" style-hover="background:#597ea3">Instalar app (acceso directo a Tramos)</button>
+      </sc-if>
+
+      <sc-if value="{{ showStats }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          <div style="position:relative;padding:10px 8px;border:1px solid rgba(29,31,32,.16);display:flex;flex-direction:column;gap:3px">
+            <i style="position:absolute;width:11px;height:11px;top:-6px;left:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+            <i style="position:absolute;width:11px;height:11px;top:-6px;right:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+            <i style="position:absolute;width:11px;height:11px;bottom:-6px;left:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+            <i style="position:absolute;width:11px;height:11px;bottom:-6px;right:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+            <div style="font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#5980a6">Contactos</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:20px">{{ contactsCount }}</div>
+          </div>
+          <div style="position:relative;padding:10px 8px;border:1px solid rgba(29,31,32,.16);display:flex;flex-direction:column;gap:3px">
+            <i style="position:absolute;width:11px;height:11px;top:-6px;left:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+            <i style="position:absolute;width:11px;height:11px;top:-6px;right:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+            <i style="position:absolute;width:11px;height:11px;bottom:-6px;left:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+            <i style="position:absolute;width:11px;height:11px;bottom:-6px;right:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+            <div style="font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#5980a6">Total abonado</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:17px">{{ totalMontoFmt }}</div>
+          </div>
+          <div style="position:relative;padding:10px 8px;border:1px solid rgba(29,31,32,.16);display:flex;flex-direction:column;gap:3px">
+            <i style="position:absolute;width:11px;height:11px;top:-6px;left:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+            <i style="position:absolute;width:11px;height:11px;top:-6px;right:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+            <i style="position:absolute;width:11px;height:11px;bottom:-6px;left:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+            <i style="position:absolute;width:11px;height:11px;bottom:-6px;right:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+            <div style="font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#5980a6">Pendientes</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:20px">{{ pendientesCount }}</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <input value="{{ search }}" onChange="{{ onSearchChange }}" placeholder="Buscar por nombre o barrio" style="width:100%;min-height:38px;padding:6px 10px;font:inherit;font-size:14px;color:#1d1f20;background:#e9e9ea;border:1px solid rgba(29,31,32,.16);border-radius:0" style-focus="border-color:#5980a6;outline:none" />
+
+      <div style="display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid rgba(29,31,32,.16)">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:rgba(29,31,32,.55)">Filtrar por fecha</div>
+          <sc-if value="{{ hasDateFilter }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ clearDateFilter }}" style="border:none;background:transparent;cursor:pointer;color:#5980a6;font-size:11.5px;padding:0" style-hover="text-decoration:underline">Quitar filtro</button>
+          </sc-if>
+        </div>
+        <div style="display:flex;gap:8px">
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:11px;color:rgba(29,31,32,.6)">Desde</label>
+            <input type="date" value="{{ filterFrom }}" onChange="{{ onFilterFromChange }}" style="width:100%;min-height:34px;padding:5px 8px;font:inherit;font-size:13px;color:#1d1f20;background:#e9e9ea;border:1px solid rgba(29,31,32,.16);border-radius:0" style-focus="border-color:#5980a6;outline:none" />
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:11px;color:rgba(29,31,32,.6)">Hasta</label>
+            <input type="date" value="{{ filterTo }}" onChange="{{ onFilterToChange }}" style="width:100%;min-height:34px;padding:5px 8px;font:inherit;font-size:13px;color:#1d1f20;background:#e9e9ea;border:1px solid rgba(29,31,32,.16);border-radius:0" style-focus="border-color:#5980a6;outline:none" />
+          </div>
+        </div>
+        <div style="display:flex;border:1px solid rgba(29,31,32,.16)">
+          <button onClick="{{ setFilterTipoTodos }}" style="flex:1;border:none;cursor:pointer;padding:7px;font-size:12px;background:{{ filterTipoTodosBg }};color:{{ filterTipoTodosFg }}">Todos</button>
+          <button onClick="{{ setFilterTipoIda }}" style="flex:1;border:none;border-left:1px solid rgba(29,31,32,.16);cursor:pointer;padding:7px;font-size:12px;background:{{ filterTipoIdaBg }};color:{{ filterTipoIdaFg }}">Ida</button>
+          <button onClick="{{ setFilterTipoVuelta }}" style="flex:1;border:none;border-left:1px solid rgba(29,31,32,.16);cursor:pointer;padding:7px;font-size:12px;background:{{ filterTipoVueltaBg }};color:{{ filterTipoVueltaFg }}">Vuelta</button>
+          <button onClick="{{ setFilterTipoAmbos }}" style="flex:1;border:none;border-left:1px solid rgba(29,31,32,.16);cursor:pointer;padding:7px;font-size:12px;background:{{ filterTipoAmbosBg }};color:{{ filterTipoAmbosFg }}">Ambos</button>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto;border:1px solid rgba(29,31,32,.16)">
+        <table style="width:100%;min-width:560px;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr>
+              <th onClick="{{ sortNombre }}" style="cursor:pointer;text-align:left;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:rgba(29,31,32,.6);padding:8px;border-bottom:1px solid rgba(29,31,32,.16);white-space:nowrap">Nombre{{ arrowNombre }}</th>
+              <th onClick="{{ sortBarrio }}" style="cursor:pointer;text-align:left;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:rgba(29,31,32,.6);padding:8px;border-bottom:1px solid rgba(29,31,32,.16);white-space:nowrap">Barrio{{ arrowBarrio }}</th>
+              <th onClick="{{ sortTramos }}" style="cursor:pointer;text-align:center;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:rgba(29,31,32,.6);padding:8px;border-bottom:1px solid rgba(29,31,32,.16);white-space:nowrap">Tramos{{ arrowTramos }}</th>
+              <th onClick="{{ sortMonto }}" style="cursor:pointer;text-align:right;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:rgba(29,31,32,.6);padding:8px;border-bottom:1px solid rgba(29,31,32,.16);white-space:nowrap">Monto{{ arrowMonto }}</th>
+              <th onClick="{{ sortFecha }}" style="cursor:pointer;text-align:left;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:rgba(29,31,32,.6);padding:8px;border-bottom:1px solid rgba(29,31,32,.16);white-space:nowrap">Fecha{{ arrowFecha }}</th>
+              <th style="text-align:left;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:rgba(29,31,32,.6);padding:8px;border-bottom:1px solid rgba(29,31,32,.16);white-space:nowrap">Viaje</th>
+              <th style="text-align:left;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:rgba(29,31,32,.6);padding:8px;border-bottom:1px solid rgba(29,31,32,.16);white-space:nowrap">Estado</th>
+              <th style="padding:8px;border-bottom:1px solid rgba(29,31,32,.16);white-space:nowrap"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{ rows }}" as="c" hint-placeholder-count="3">
+              <tr style-hover="background:rgba(29,31,32,.04)">
+                <td style="padding:8px;border-bottom:1px solid rgba(29,31,32,.08);font-weight:500;white-space:nowrap">{{ c.nombre }}</td>
+                <td style="padding:8px;border-bottom:1px solid rgba(29,31,32,.08);white-space:nowrap">{{ c.barrio }}</td>
+                <td style="padding:8px;border-bottom:1px solid rgba(29,31,32,.08);text-align:center">{{ c.tramos }}</td>
+                <td style="padding:8px;border-bottom:1px solid rgba(29,31,32,.08);text-align:right;white-space:nowrap">{{ c.montoFmt }}</td>
+                <td style="padding:8px;border-bottom:1px solid rgba(29,31,32,.08);white-space:nowrap">{{ c.fechaFmt }}</td>
+                <td style="padding:8px;border-bottom:1px solid rgba(29,31,32,.08);white-space:nowrap">{{ c.tipoLabel }}</td>
+                <td style="padding:8px;border-bottom:1px solid rgba(29,31,32,.08)">
+                  <span onClick="{{ c.onToggleEstado }}" style="cursor:pointer;display:inline-flex;align-items:center;font-size:11px;letter-spacing:.02em;padding:3px 9px;background:{{ c.estadoBg }};color:{{ c.estadoFg }}">{{ c.estadoLabel }}</span>
+                </td>
+                <td style="padding:8px;border-bottom:1px solid rgba(29,31,32,.08);white-space:nowrap">
+                  <div style="display:flex;gap:10px">
+                    <button onClick="{{ c.onEdit }}" style="border:none;background:transparent;cursor:pointer;color:#5980a6;font-size:12px;padding:0" style-hover="text-decoration:underline">Editar</button>
+                    <button onClick="{{ c.onDelete }}" style="border:none;background:transparent;cursor:pointer;color:rgba(29,31,32,.55);font-size:12px;padding:0" style-hover="color:#1d1f20;text-decoration:underline">Eliminar</button>
+                  </div>
+                </td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+      <sc-if value="{{ hasRowsInverted }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align:center;font-size:13px;color:rgba(29,31,32,.55);padding:10px 0">No se encontraron contactos.</div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ editing }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;display:grid;place-items:center;padding:16px;background:rgba(43,43,45,.5);z-index:50">
+      <form onSubmit="{{ saveEdit }}" style="position:relative;width:min(420px,100%);display:flex;flex-direction:column;gap:12px;padding:18px 16px;background:#e9e9ea;border:1px solid rgba(29,31,32,.16);box-shadow:0 12px 32px rgba(43,43,45,.22)">
+        <i style="position:absolute;width:11px;height:11px;top:-6px;left:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+        <i style="position:absolute;width:11px;height:11px;top:-6px;right:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+        <i style="position:absolute;width:11px;height:11px;bottom:-6px;left:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+        <i style="position:absolute;width:11px;height:11px;bottom:-6px;right:-6px;color:rgba(29,31,32,.55)" style-before="content:'';position:absolute;left:5px;top:0;width:1px;height:100%;background:currentColor" style-after="content:'';position:absolute;top:5px;left:0;width:100%;height:1px;background:currentColor"></i>
+
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:19px">Editar contacto</div>
+
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <label style="font-size:12px;color:rgba(29,31,32,.7)">Nombre y apellido</label>
+          <input required="" value="{{ ec.nombre }}" onChange="{{ onEditNombreChange }}" style="width:100%;min-height:36px;padding:6px 10px;font:inherit;font-size:14px;color:#1d1f20;background:#f2f2f3;border:1px solid rgba(29,31,32,.16)" style-focus="border-color:#5980a6;outline:none" />
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <label style="font-size:12px;color:rgba(29,31,32,.7)">Barrio</label>
+          <input value="{{ ec.barrio }}" onChange="{{ onEditBarrioChange }}" style="width:100%;min-height:36px;padding:6px 10px;font:inherit;font-size:14px;color:#1d1f20;background:#f2f2f3;border:1px solid rgba(29,31,32,.16)" style-focus="border-color:#5980a6;outline:none" />
+        </div>
+        <div style="display:flex;gap:12px">
+          <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+            <label style="font-size:12px;color:rgba(29,31,32,.7)">Tramos</label>
+            <input type="number" min="0" value="{{ ec.tramos }}" onChange="{{ onEditTramosChange }}" style="width:100%;min-height:36px;padding:6px 10px;font:inherit;font-size:14px;color:#1d1f20;background:#f2f2f3;border:1px solid rgba(29,31,32,.16)" style-focus="border-color:#5980a6;outline:none" />
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+            <label style="font-size:12px;color:rgba(29,31,32,.7)">Monto abonado</label>
+            <input type="number" min="0" step="any" value="{{ ec.monto }}" onChange="{{ onEditMontoChange }}" style="width:100%;min-height:36px;padding:6px 10px;font:inherit;font-size:14px;color:#1d1f20;background:#f2f2f3;border:1px solid rgba(29,31,32,.16)" style-focus="border-color:#5980a6;outline:none" />
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <label style="font-size:12px;color:rgba(29,31,32,.7)">Email</label>
+          <input type="email" value="{{ ec.mail }}" onChange="{{ onEditMailChange }}" style="width:100%;min-height:36px;padding:6px 10px;font:inherit;font-size:14px;color:#1d1f20;background:#f2f2f3;border:1px solid rgba(29,31,32,.16)" style-focus="border-color:#5980a6;outline:none" />
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <label style="font-size:12px;color:rgba(29,31,32,.7)">Teléfono</label>
+          <input type="tel" value="{{ ec.telefono }}" onChange="{{ onEditTelefonoChange }}" style="width:100%;min-height:36px;padding:6px 10px;font:inherit;font-size:14px;color:#1d1f20;background:#f2f2f3;border:1px solid rgba(29,31,32,.16)" style-focus="border-color:#5980a6;outline:none" />
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <label style="font-size:12px;color:rgba(29,31,32,.7)">Fecha</label>
+          <input type="date" value="{{ ec.fecha }}" onChange="{{ onEditFechaChange }}" style="width:100%;min-height:36px;padding:6px 10px;font:inherit;font-size:14px;color:#1d1f20;background:#f2f2f3;border:1px solid rgba(29,31,32,.16)" style-focus="border-color:#5980a6;outline:none" />
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <label style="font-size:12px;color:rgba(29,31,32,.7)">Días de traslado</label>
+          <div style="display:flex;gap:8px">
+            <sc-for list="{{ editDiasOptions }}" as="d" hint-placeholder-count="5">
+              <button type="button" onClick="{{ d.onToggle }}" style="width:36px;height:36px;border-radius:50%;border:1px solid #5980a6;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:14px;background:{{ d.bg }};color:{{ d.fg }}">{{ d.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <label style="font-size:12px;color:rgba(29,31,32,.7)">Tipo de viaje</label>
+          <div style="display:flex;border:1px solid rgba(29,31,32,.16)">
+            <button type="button" onClick="{{ setEditTipoIda }}" style="flex:1;border:none;cursor:pointer;padding:8px;font-size:12.5px;background:{{ editTipoIdaBg }};color:{{ editTipoIdaFg }}">Ida</button>
+            <button type="button" onClick="{{ setEditTipoVuelta }}" style="flex:1;border:none;border-left:1px solid rgba(29,31,32,.16);cursor:pointer;padding:8px;font-size:12.5px;background:{{ editTipoVueltaBg }};color:{{ editTipoVueltaFg }}">Vuelta</button>
+            <button type="button" onClick="{{ setEditTipoAmbos }}" style="flex:1;border:none;border-left:1px solid rgba(29,31,32,.16);cursor:pointer;padding:8px;font-size:12.5px;background:{{ editTipoAmbosBg }};color:{{ editTipoAmbosFg }}">Ambos</button>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <label style="font-size:12px;color:rgba(29,31,32,.7)">Estado</label>
+          <div style="display:flex;border:1px solid rgba(29,31,32,.16)">
+            <button type="button" onClick="{{ setEditEstadoPendiente }}" style="flex:1;border:none;cursor:pointer;padding:8px;font-size:13px;background:{{ editEstadoPendienteBg }};color:{{ editEstadoPendienteFg }}">Pendiente</button>
+            <button type="button" onClick="{{ setEditEstadoPagado }}" style="flex:1;border:none;border-left:1px solid rgba(29,31,32,.16);cursor:pointer;padding:8px;font-size:13px;background:{{ editEstadoPagadoBg }};color:{{ editEstadoPagadoFg }}">Pagado</button>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+          <button type="button" onClick="{{ cancelEdit }}" style="border:1px solid rgba(29,31,32,.16);background:transparent;cursor:pointer;padding:9px 14px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:13px;color:#1d1f20" style-hover="background:rgba(29,31,32,.06)">Cancelar</button>
+          <button type="submit" style="border:1px solid #5980a6;background:#5980a6;cursor:pointer;padding:9px 14px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:13px;color:#f2f2f3" style-hover="background:#597ea3">Guardar cambios</button>
+        </div>
+      </form>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ syncing }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;display:grid;place-items:center;padding:16px;background:rgba(43,43,45,.5);z-index:50">
+      <div style="width:min(400px,100%);display:flex;flex-direction:column;gap:12px;padding:18px 16px;background:#e9e9ea;border:1px solid rgba(29,31,32,.16);box-shadow:0 12px 32px rgba(43,43,45,.22)">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:19px">Sincronizar entre dispositivos</div>
+        <div style="font-size:12.5px;color:rgba(29,31,32,.65)">Compartí este código con quien también va a cargar clientes. Quien lo ingrese en su celular o compu va a ver y editar los mismos contactos.</div>
+
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <label style="font-size:12px;color:rgba(29,31,32,.7)">Código de sincronización</label>
+          <input value="{{ syncCodeInput }}" onChange="{{ onSyncCodeChange }}" placeholder="Ej: TRASLADOS-8K3F" style="width:100%;min-height:38px;padding:6px 10px;font:inherit;font-size:14px;color:#1d1f20;background:#f2f2f3;border:1px solid rgba(29,31,32,.16)" style-focus="border-color:#5980a6;outline:none" />
+        </div>
+
+        <div style="display:flex;gap:8px">
+          <button onClick="{{ generateSyncCode }}" style="flex:1;border:1px solid rgba(29,31,32,.16);background:transparent;cursor:pointer;padding:9px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:12.5px;color:#1d1f20" style-hover="background:rgba(29,31,32,.06)">Generar código nuevo</button>
+          <button onClick="{{ saveSyncCode }}" style="flex:1;border:1px solid #5980a6;background:#5980a6;cursor:pointer;padding:9px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:12.5px;color:#f2f2f3" style-hover="background:#597ea3">Guardar y unir</button>
+        </div>
+
+        <div style="font-size:12px;color:rgba(29,31,32,.6)">{{ syncStatus }}</div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:2px">
+          <button onClick="{{ syncNow }}" style="border:1px solid rgba(29,31,32,.16);background:transparent;cursor:pointer;padding:9px 14px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:13px;color:#1d1f20" style-hover="background:rgba(29,31,32,.06)">Sincronizar ahora</button>
+          <button onClick="{{ closeSync }}" style="border:1px solid rgba(29,31,32,.16);background:transparent;cursor:pointer;padding:9px 14px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:13px;color:#1d1f20" style-hover="background:rgba(29,31,32,.06)">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ deleting }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;display:grid;place-items:center;padding:16px;background:rgba(43,43,45,.5);z-index:50">
+      <div style="width:min(360px,100%);display:flex;flex-direction:column;gap:14px;padding:18px 16px;background:#e9e9ea;border:1px solid rgba(29,31,32,.16);box-shadow:0 12px 32px rgba(43,43,45,.22)">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:19px">Eliminar contacto</div>
+        <div style="font-size:14px;opacity:0.85">¿Eliminar a {{ deletingName }}? Esta acción no se puede deshacer.</div>
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+          <button onClick="{{ cancelDelete }}" style="border:1px solid rgba(29,31,32,.16);background:transparent;cursor:pointer;padding:9px 14px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:13px;color:#1d1f20" style-hover="background:rgba(29,31,32,.06)">Cancelar</button>
+          <button onClick="{{ confirmDelete }}" style="border:1px solid #2c455d;background:#2c455d;cursor:pointer;padding:9px 14px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:13px;color:#f2f2f3" style-hover="background:#1d2d3d">Eliminar</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;defaultView&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;form&quot;, &quot;tsType&quot;: &quot;'form'|'list'&quot;, &quot;options&quot;: [&quot;form&quot;, &quot;list&quot;], &quot;section&quot;: &quot;Comportamiento&quot;}, &quot;currencySymbol&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;$&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Comportamiento&quot;}, &quot;showStats&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Comportamiento&quot;}}">
+class Component extends DCLogic {
+  state = {
+    view: (this.props.defaultView === 'list' ? 'list' : 'form'),
+    contacts: [],
+    search: '',
+    sortKey: 'nombre',
+    sortDir: 'asc',
+    form: { nombre: '', barrio: '', tramos: '', mail: '', telefono: '', monto: '', estado: 'pendiente', fecha: '', tipoViaje: 'ambos', dias: [] },
+    editingContact: null,
+    deletingContact: null,
+    savedFlash: false,
+    deferredInstallPrompt: null,
+    filterFrom: '',
+    filterTo: '',
+    filterTipo: 'todos',
+    syncing: false,
+    syncCode: '',
+    syncCodeInput: '',
+    syncStatus: ''
+  };
+
+  componentDidMount() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const v = params.get('view');
+      if (v === 'tramos' || v === 'list' || v === 'form') this.setState({ view: v });
+    } catch (e) {}
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      this.setState({ deferredInstallPrompt: e });
+    });
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem('ds_transporte_contactos_v1') || 'null'); } catch (e) {}
+    if (saved && Array.isArray(saved) && saved.length) {
+      this.setState({ contacts: saved });
+    } else {
+      const seed = [
+        { id: 1, nombre: 'Martina Ibáñez', barrio: 'Nordelta', tramos: 4, mail: 'martina.ibanez@gmail.com', telefono: '11 4455-2201', monto: 38000, estado: 'pagado', fecha: '2026-08-03', tipoViaje: 'ambos' },
+        { id: 2, nombre: 'Fernando Ríos', barrio: 'La Horqueta', tramos: 2, mail: 'fernando.rios@hotmail.com', telefono: '11 6633-7845', monto: 19000, estado: 'pendiente', fecha: '2026-08-10', tipoViaje: 'ida' },
+        { id: 3, nombre: 'Lucía Ferreyra', barrio: 'Villa Nueva', tramos: 6, mail: 'lucia.ferreyra@yahoo.com.ar', telefono: '11 5522-9910', monto: 52000, estado: 'pagado', fecha: '2026-08-15', tipoViaje: 'vuelta' }
+      ];
+      this.setState({ contacts: seed });
+    }
+    let code = '';
+    try { code = localStorage.getItem('ds_transporte_sync_code_v1') || ''; } catch (e) {}
+    if (code) {
+      this.setState({ syncCode: code, syncCodeInput: code });
+      this.pullFromCloud(code);
+      this._syncInterval = setInterval(() => this.pullFromCloud(this.state.syncCode), 20000);
+    }
+  }
+
+  componentWillUnmount() {
+    if (this._syncInterval) clearInterval(this._syncInterval);
+  }
+
+  cloudUrl(code) { return 'https://kvdb.io/' + encodeURIComponent(code) + '/contactos'; }
+
+  async pushToCloud() {
+    const code = this.state.syncCode;
+    if (!code) return;
+    try {
+      await fetch(this.cloudUrl(code), { method: 'PUT', body: JSON.stringify(this.state.contacts) });
+    } catch (e) {}
+  }
+
+  async pullFromCloud(code, showStatus) {
+    if (!code) return;
+    if (showStatus) this.setState({ syncStatus: 'Sincronizando…' });
+    try {
+      const res = await fetch(this.cloudUrl(code));
+      if (res.ok) {
+        const text = await res.text();
+        if (text) {
+          const contacts = JSON.parse(text);
+          if (Array.isArray(contacts)) {
+            const prevIds = new Set(this.state.contacts.map(c => c.id));
+            const newOnes = contacts.filter(c => !prevIds.has(c.id));
+            this.persist(contacts);
+            this.setState({ contacts });
+            if (this._syncedOnce && newOnes.length) newOnes.forEach(c => this.notifyNewContact(c.nombre));
+            this._syncedOnce = true;
+          }
+        }
+        if (showStatus) this.setState({ syncStatus: 'Sincronizado ✓ ' + new Date().toLocaleTimeString('es-AR') });
+      } else if (showStatus) {
+        this.setState({ syncStatus: 'Código nuevo: todavía no tiene datos guardados.' });
+      }
+    } catch (e) {
+      if (showStatus) this.setState({ syncStatus: 'No se pudo sincronizar. Revisá tu conexión.' });
+    }
+  }
+
+  openSync() { this.setState({ syncing: true, syncCodeInput: this.state.syncCode, syncStatus: '' }); }
+  closeSync() { this.setState({ syncing: false }); }
+  setSyncCodeInput(v) { this.setState({ syncCodeInput: v }); }
+  generateSyncCode() {
+    const code = 'TRASLADOS-' + Math.random().toString(36).slice(2, 7).toUpperCase();
+    this.setState({ syncCodeInput: code });
+  }
+  saveSyncCode() {
+    const code = (this.state.syncCodeInput || '').trim();
+    if (!code) return;
+    try { localStorage.setItem('ds_transporte_sync_code_v1', code); } catch (e) {}
+    if (this._syncInterval) clearInterval(this._syncInterval);
+    this.setState({ syncCode: code, syncStatus: 'Sincronizando…' });
+    this.pullFromCloud(code, true).then(() => this.pushToCloud());
+    this._syncInterval = setInterval(() => this.pullFromCloud(this.state.syncCode), 20000);
+  }
+  syncNow() {
+    if (!this.state.syncCode) { this.setState({ syncStatus: 'Ingresá o generá un código primero.' }); return; }
+    this.pullFromCloud(this.state.syncCode, true).then(() => this.pushToCloud());
+  }
+
+  persist(contacts) {
+    try { localStorage.setItem('ds_transporte_contactos_v1', JSON.stringify(contacts)); } catch (e) {}
+  }
+
+  static DIAS = [{ key: 'lun', label: 'L' }, { key: 'mar', label: 'M' }, { key: 'mie', label: 'M' }, { key: 'jue', label: 'J' }, { key: 'vie', label: 'V' }];
+
+  setView(v) { this.setState({ view: v }); }
+  toggleFormDia(key) {
+    this.setState(s => {
+      const dias = s.form.dias || [];
+      const next = dias.includes(key) ? dias.filter(d => d !== key) : [...dias, key];
+      return { form: { ...s.form, dias: next } };
+    });
+  }
+  toggleEditDia(key) {
+    this.setState(s => {
+      const dias = (s.editingContact && s.editingContact.dias) || [];
+      const next = dias.includes(key) ? dias.filter(d => d !== key) : [...dias, key];
+      return { editingContact: { ...s.editingContact, dias: next } };
+    });
+  }
+  async installApp() {
+    const evt = this.state.deferredInstallPrompt;
+    if (!evt) return;
+    evt.prompt();
+    await evt.userChoice;
+    this.setState({ deferredInstallPrompt: null });
+  }
+  adjustTramos(contact, delta) {
+    const contacts = this.state.contacts.map(c => c.id === contact.id ? { ...c, tramos: Math.max(0, (Number(c.tramos) || 0) + delta) } : c);
+    this.persist(contacts);
+    this.setState({ contacts });
+    this.pushToCloud();
+  }
+  setFormField(field, value) { this.setState(s => ({ form: { ...s.form, [field]: value } })); }
+
+  submitForm(e) {
+    e.preventDefault();
+    const f = this.state.form;
+    if (!f.nombre || !f.nombre.trim()) return;
+    const newContact = {
+      id: Date.now(),
+      nombre: f.nombre.trim(),
+      barrio: (f.barrio || '').trim(),
+      tramos: Number(f.tramos) || 0,
+      mail: (f.mail || '').trim(),
+      telefono: (f.telefono || '').trim(),
+      monto: Number(f.monto) || 0,
+      estado: f.estado || 'pendiente',
+      fecha: f.fecha || '',
+      tipoViaje: f.tipoViaje || 'ambos',
+      dias: f.dias || []
+    };
+    const contacts = [...this.state.contacts, newContact];
+    this.persist(contacts);
+    this.setState({ contacts, form: { nombre: '', barrio: '', tramos: '', mail: '', telefono: '', monto: '', estado: 'pendiente', fecha: '', tipoViaje: 'ambos', dias: [] }, savedFlash: true });
+    setTimeout(() => this.setState({ savedFlash: false }), 2200);
+    this.notifyNewContact(newContact.nombre);
+    this.pushToCloud();
+  }
+
+  openEdit(contact) { this.setState({ editingContact: { ...contact } }); }
+  setEditField(field, value) { this.setState(s => ({ editingContact: { ...s.editingContact, [field]: value } })); }
+  cancelEdit() { this.setState({ editingContact: null }); }
+  saveEdit(e) {
+    e.preventDefault();
+    const ec = this.state.editingContact;
+    if (!ec.nombre || !ec.nombre.trim()) return;
+    const contacts = this.state.contacts.map(c => c.id === ec.id ? { ...ec, tramos: Number(ec.tramos) || 0, monto: Number(ec.monto) || 0, fecha: ec.fecha || '', tipoViaje: ec.tipoViaje || 'ambos', dias: ec.dias || [] } : c);
+    this.persist(contacts);
+    this.setState({ contacts, editingContact: null });
+    this.pushToCloud();
+  }
+
+  requestDelete(contact) { this.setState({ deletingContact: contact }); }
+  cancelDelete() { this.setState({ deletingContact: null }); }
+  confirmDelete() {
+    const id = this.state.deletingContact.id;
+    const contacts = this.state.contacts.filter(c => c.id !== id);
+    this.persist(contacts);
+    this.setState({ contacts, deletingContact: null });
+    this.pushToCloud();
+  }
+
+  toggleEstado(contact) {
+    const contacts = this.state.contacts.map(c => c.id === contact.id ? { ...c, estado: c.estado === 'pagado' ? 'pendiente' : 'pagado' } : c);
+    this.persist(contacts);
+    this.setState({ contacts });
+    this.pushToCloud();
+  }
+
+  setSearch(v) { this.setState({ search: v }); }
+  setFilterFrom(v) { this.setState({ filterFrom: v }); }
+  setFilterTo(v) { this.setState({ filterTo: v }); }
+  setFilterTipo(v) { this.setState({ filterTipo: v }); }
+  clearDateFilter() { this.setState({ filterFrom: '', filterTo: '' }); }
+
+  notifyNewContact(nombre) {
+    if (typeof Notification === 'undefined') return;
+    const fire = () => {
+      try { new Notification('Nuevo cliente cargado', { body: nombre, tag: 'nuevo-cliente' }); } catch (e) {}
+    };
+    if (Notification.permission === 'granted') fire();
+    else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then(p => { if (p === 'granted') fire(); });
+    }
+  }
+  setSort(key) {
+    this.setState(s => ({ sortKey: key, sortDir: s.sortKey === key ? (s.sortDir === 'asc' ? 'desc' : 'asc') : 'asc' }));
+  }
+
+  getFilteredSorted() {
+    const { contacts, search, sortKey, sortDir, filterFrom, filterTo, filterTipo } = this.state;
+    const q = search.trim().toLowerCase();
+    let list = contacts;
+    if (q) list = list.filter(c => c.nombre.toLowerCase().includes(q) || (c.barrio || '').toLowerCase().includes(q));
+    if (filterFrom) list = list.filter(c => c.fecha && c.fecha >= filterFrom);
+    if (filterTo) list = list.filter(c => c.fecha && c.fecha <= filterTo);
+    if (filterTipo !== 'todos') list = list.filter(c => (c.tipoViaje || 'ambos') === filterTipo);
+    list = [...list].sort((a, b) => {
+      let av = a[sortKey], bv = b[sortKey];
+      if (typeof av === 'string') { av = av.toLowerCase(); bv = (bv || '').toLowerCase(); }
+      if (av < bv) return sortDir === 'asc' ? -1 : 1;
+      if (av > bv) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return list;
+  }
+
+  tipoLabel(v) {
+    return v === 'ida' ? 'Ida' : v === 'vuelta' ? 'Vuelta' : 'Ambos';
+  }
+
+  diasLabel(dias) {
+    const map = { lun: 'Lun', mar: 'Mar', mie: 'Mié', jue: 'Jue', vie: 'Vie' };
+    return (dias || []).map(d => map[d] || d).join(', ');
+  }
+
+  exportExcel() {
+    const header = ['Nombre', 'Barrio', 'Tramos', 'Email', 'Teléfono', 'Monto abonado', 'Fecha', 'Viaje', 'Días', 'Estado'];
+    const data = this.getFilteredSorted().map(c => [
+      c.nombre, c.barrio, c.tramos, c.mail, c.telefono, Number(c.monto) || 0, c.fecha || '', this.tipoLabel(c.tipoViaje), this.diasLabel(c.dias),
+      c.estado === 'pagado' ? 'Pagado' : 'Pendiente'
+    ]);
+    const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
+    ws['!cols'] = [{ wch: 24 }, { wch: 18 }, { wch: 9 }, { wch: 26 }, { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 9 }, { wch: 18 }, { wch: 11 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Contactos');
+    XLSX.writeFile(wb, 'contactos_traslado.xlsx');
+  }
+
+  fmtMoney(n) {
+    const symbol = this.props.currencySymbol || '$';
+    return symbol + ' ' + Number(n || 0).toLocaleString('es-AR');
+  }
+
+  renderVals() {
+    const s = this.state;
+    const filtered = this.getFilteredSorted();
+    const total = s.contacts.length;
+    const totalMonto = s.contacts.reduce((sum, c) => sum + (Number(c.monto) || 0), 0);
+    const pendientes = s.contacts.filter(c => c.estado !== 'pagado').length;
+    const arrow = (key) => s.sortKey === key ? (s.sortDir === 'asc' ? ' \u25B2' : ' \u25BC') : '';
+    const rows = filtered.map(c => ({
+      ...c,
+      montoFmt: this.fmtMoney(c.monto),
+      isPagado: c.estado === 'pagado',
+      estadoLabel: c.estado === 'pagado' ? 'Pagado' : 'Pendiente',
+      estadoBg: c.estado === 'pagado' ? '#eef6ff' : '#f5f5f8',
+      estadoFg: c.estado === 'pagado' ? '#2c455d' : '#424244',
+      fechaFmt: c.fecha ? c.fecha.split('-').reverse().join('/') : '—',
+      tipoLabel: this.tipoLabel(c.tipoViaje),
+      onEdit: () => this.openEdit(c),
+      onDelete: () => this.requestDelete(c),
+      onToggleEstado: () => this.toggleEstado(c)
+    }));
+    const ec = s.editingContact;
+    return {
+      showStats: this.props.showStats !== false,
+      isFormView: s.view === 'form',
+      isListView: s.view === 'list',
+      isTramosView: s.view === 'tramos',
+      goForm: () => this.setView('form'),
+      goList: () => this.setView('list'),
+      goTramos: () => this.setView('tramos'),
+      tabFormBg: s.view === 'form' ? '#5980a6' : '#f2f2f3',
+      tabFormFg: s.view === 'form' ? '#f2f2f3' : '#1d1f20',
+      tabListBg: s.view === 'list' ? '#5980a6' : '#f2f2f3',
+      tabListFg: s.view === 'list' ? '#f2f2f3' : '#1d1f20',
+      tabTramosBg: s.view === 'tramos' ? '#5980a6' : '#f2f2f3',
+      tabTramosFg: s.view === 'tramos' ? '#f2f2f3' : '#1d1f20',
+      tramosRows: s.contacts.map(c => ({
+        id: c.id, nombre: c.nombre, barrio: c.barrio, tramos: Number(c.tramos) || 0,
+        onInc: () => this.adjustTramos(c, 1),
+        onDec: () => this.adjustTramos(c, -1)
+      })),
+      canInstall: !!s.deferredInstallPrompt,
+      installApp: () => this.installApp(),
+      openSync: () => this.openSync(),
+      closeSync: () => this.closeSync(),
+      syncing: s.syncing,
+      syncCodeInput: s.syncCodeInput,
+      onSyncCodeChange: (e) => this.setSyncCodeInput(e.target.value),
+      generateSyncCode: () => this.generateSyncCode(),
+      saveSyncCode: () => this.saveSyncCode(),
+      syncNow: () => this.syncNow(),
+      syncStatus: s.syncStatus,
+      contactsCount: total,
+      totalMontoFmt: this.fmtMoney(totalMonto),
+      pendientesCount: pendientes,
+      form: s.form,
+      onNombreChange: (e) => this.setFormField('nombre', e.target.value),
+      onBarrioChange: (e) => this.setFormField('barrio', e.target.value),
+      onTramosChange: (e) => this.setFormField('tramos', e.target.value),
+      onMailChange: (e) => this.setFormField('mail', e.target.value),
+      onTelefonoChange: (e) => this.setFormField('telefono', e.target.value),
+      onMontoChange: (e) => this.setFormField('monto', e.target.value),
+      onFechaChange: (e) => this.setFormField('fecha', e.target.value),
+      diasOptions: Component.DIAS.map(d => ({
+        key: d.key, label: d.label,
+        bg: (s.form.dias || []).includes(d.key) ? '#5980a6' : 'transparent',
+        fg: (s.form.dias || []).includes(d.key) ? '#f2f2f3' : '#5980a6',
+        onToggle: () => this.toggleFormDia(d.key)
+      })),
+      setTipoIda: () => this.setFormField('tipoViaje', 'ida'),
+      setTipoVuelta: () => this.setFormField('tipoViaje', 'vuelta'),
+      setTipoAmbos: () => this.setFormField('tipoViaje', 'ambos'),
+      tipoIdaBg: s.form.tipoViaje === 'ida' ? '#5980a6' : 'transparent',
+      tipoIdaFg: s.form.tipoViaje === 'ida' ? '#f2f2f3' : '#1d1f20',
+      tipoVueltaBg: s.form.tipoViaje === 'vuelta' ? '#5980a6' : 'transparent',
+      tipoVueltaFg: s.form.tipoViaje === 'vuelta' ? '#f2f2f3' : '#1d1f20',
+      tipoAmbosBg: s.form.tipoViaje === 'ambos' || !s.form.tipoViaje ? '#5980a6' : 'transparent',
+      tipoAmbosFg: s.form.tipoViaje === 'ambos' || !s.form.tipoViaje ? '#f2f2f3' : '#1d1f20',
+      setEstadoPendiente: () => this.setFormField('estado', 'pendiente'),
+      setEstadoPagado: () => this.setFormField('estado', 'pagado'),
+      isEstadoPendiente: s.form.estado !== 'pagado',
+      estadoPendienteBg: s.form.estado !== 'pagado' ? '#5980a6' : 'transparent',
+      estadoPendienteFg: s.form.estado !== 'pagado' ? '#f2f2f3' : '#1d1f20',
+      estadoPagadoBg: s.form.estado === 'pagado' ? '#5980a6' : 'transparent',
+      estadoPagadoFg: s.form.estado === 'pagado' ? '#f2f2f3' : '#1d1f20',
+      submitForm: (e) => this.submitForm(e),
+      savedFlash: s.savedFlash,
+      search: s.search,
+      onSearchChange: (e) => this.setSearch(e.target.value),
+      filterFrom: s.filterFrom,
+      filterTo: s.filterTo,
+      onFilterFromChange: (e) => this.setFilterFrom(e.target.value),
+      onFilterToChange: (e) => this.setFilterTo(e.target.value),
+      hasDateFilter: !!(s.filterFrom || s.filterTo),
+      clearDateFilter: () => this.clearDateFilter(),
+      setFilterTipoTodos: () => this.setFilterTipo('todos'),
+      setFilterTipoIda: () => this.setFilterTipo('ida'),
+      setFilterTipoVuelta: () => this.setFilterTipo('vuelta'),
+      setFilterTipoAmbos: () => this.setFilterTipo('ambos'),
+      filterTipoTodosBg: s.filterTipo === 'todos' ? '#5980a6' : 'transparent',
+      filterTipoTodosFg: s.filterTipo === 'todos' ? '#f2f2f3' : '#1d1f20',
+      filterTipoIdaBg: s.filterTipo === 'ida' ? '#5980a6' : 'transparent',
+      filterTipoIdaFg: s.filterTipo === 'ida' ? '#f2f2f3' : '#1d1f20',
+      filterTipoVueltaBg: s.filterTipo === 'vuelta' ? '#5980a6' : 'transparent',
+      filterTipoVueltaFg: s.filterTipo === 'vuelta' ? '#f2f2f3' : '#1d1f20',
+      filterTipoAmbosBg: s.filterTipo === 'ambos' ? '#5980a6' : 'transparent',
+      filterTipoAmbosFg: s.filterTipo === 'ambos' ? '#f2f2f3' : '#1d1f20',
+      rows,
+      hasRows: rows.length > 0,
+      hasRowsInverted: rows.length === 0,
+      arrowNombre: arrow('nombre'), arrowBarrio: arrow('barrio'), arrowTramos: arrow('tramos'), arrowMonto: arrow('monto'), arrowFecha: arrow('fecha'),
+      sortNombre: () => this.setSort('nombre'), sortBarrio: () => this.setSort('barrio'), sortTramos: () => this.setSort('tramos'), sortMonto: () => this.setSort('monto'), sortFecha: () => this.setSort('fecha'),
+      exportExcel: () => this.exportExcel(),
+      editing: !!ec,
+      ec: ec || {},
+      onEditNombreChange: (e) => this.setEditField('nombre', e.target.value),
+      onEditBarrioChange: (e) => this.setEditField('barrio', e.target.value),
+      onEditTramosChange: (e) => this.setEditField('tramos', e.target.value),
+      onEditMailChange: (e) => this.setEditField('mail', e.target.value),
+      onEditTelefonoChange: (e) => this.setEditField('telefono', e.target.value),
+      onEditMontoChange: (e) => this.setEditField('monto', e.target.value),
+      onEditFechaChange: (e) => this.setEditField('fecha', e.target.value),
+      editDiasOptions: Component.DIAS.map(d => ({
+        key: d.key, label: d.label,
+        bg: (ec && ec.dias || []).includes(d.key) ? '#5980a6' : 'transparent',
+        fg: (ec && ec.dias || []).includes(d.key) ? '#f2f2f3' : '#5980a6',
+        onToggle: () => this.toggleEditDia(d.key)
+      })),
+      setEditTipoIda: () => this.setEditField('tipoViaje', 'ida'),
+      setEditTipoVuelta: () => this.setEditField('tipoViaje', 'vuelta'),
+      setEditTipoAmbos: () => this.setEditField('tipoViaje', 'ambos'),
+      editTipoIdaBg: ec && ec.tipoViaje === 'ida' ? '#5980a6' : 'transparent',
+      editTipoIdaFg: ec && ec.tipoViaje === 'ida' ? '#f2f2f3' : '#1d1f20',
+      editTipoVueltaBg: ec && ec.tipoViaje === 'vuelta' ? '#5980a6' : 'transparent',
+      editTipoVueltaFg: ec && ec.tipoViaje === 'vuelta' ? '#f2f2f3' : '#1d1f20',
+      editTipoAmbosBg: (!ec || !ec.tipoViaje || ec.tipoViaje === 'ambos') ? '#5980a6' : 'transparent',
+      editTipoAmbosFg: (!ec || !ec.tipoViaje || ec.tipoViaje === 'ambos') ? '#f2f2f3' : '#1d1f20',
+      setEditEstadoPendiente: () => this.setEditField('estado', 'pendiente'),
+      setEditEstadoPagado: () => this.setEditField('estado', 'pagado'),
+      editIsEstadoPendiente: ec ? ec.estado !== 'pagado' : true,
+      editEstadoPendienteBg: (!ec || ec.estado !== 'pagado') ? '#5980a6' : 'transparent',
+      editEstadoPendienteFg: (!ec || ec.estado !== 'pagado') ? '#f2f2f3' : '#1d1f20',
+      editEstadoPagadoBg: (ec && ec.estado === 'pagado') ? '#5980a6' : 'transparent',
+      editEstadoPagadoFg: (ec && ec.estado === 'pagado') ? '#f2f2f3' : '#1d1f20',
+      cancelEdit: () => this.cancelEdit(),
+      saveEdit: (e) => this.saveEdit(e),
+      deleting: !!s.deletingContact,
+      deletingName: s.deletingContact ? s.deletingContact.nombre : '',
+      cancelDelete: () => this.cancelDelete(),
+      confirmDelete: () => this.confirmDelete()
+    };
+  }
+}
+</script>
+</body>
+</html>
