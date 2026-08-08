@@ -119,7 +119,7 @@
         </div>
         <form data-form="auth" style="display:flex;flex-direction:column;gap:12px">
           ${m !== 'login' ? '<div class="field"><label>Tu nombre</label><input id="a-name" class="input" placeholder="Ej: Martina" required /></div>' : ''}
-          <div class="field"><label>Email</label><input id="a-email" type="email" class="input" placeholder="nombre@mail.com" required /></div>
+          <div class="field"><label>Email</label><input id="a-email" type="email" class="input" placeholder="nombre@mail.com" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required /></div>
           <div class="field"><label>Contraseña</label><input id="a-password" type="password" class="input" placeholder="Mínimo 8 caracteres" required minlength="8" /></div>
           ${m === 'register' ? '<div class="field"><label>Nombre del espacio de trabajo</label><input id="a-workspace" class="input" placeholder="Ej: Traslados Privados" /></div>' : ''}
           ${m === 'join' ? '<div class="field"><label>Código de invitación</label><input id="a-code" class="input" placeholder="Ej: TRASLADOS-8K3F" required /></div>' : ''}
@@ -703,9 +703,13 @@
     }
   });
 
+  const NO_RERENDER_FIELDS = ['nombre', 'barrio', 'mail', 'telefono'];
   root.addEventListener('input', (e) => {
     const bind = e.target.dataset.bind;
-    if (bind) { setPath(bind, e.target.value); render(); }
+    if (!bind) return;
+    setPath(bind, e.target.value);
+    if (NO_RERENDER_FIELDS.includes(bind.split('.').pop())) return;
+    render();
   });
 
   root.addEventListener('submit', (e) => {
