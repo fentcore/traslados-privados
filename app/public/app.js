@@ -193,11 +193,11 @@
         <div class="field"><label>Nombre y apellido</label><input id="f-nombre" class="input" data-bind="form.nombre" value="${esc(f.nombre)}" placeholder="Ej: Martina Ibáñez" required /></div>
         <div class="field"><label>Barrio</label><input id="f-barrio" class="input" data-bind="form.barrio" value="${esc(f.barrio)}" placeholder="Ej: Nordelta" /></div>
         <div style="display:flex;gap:12px">
-          <div class="field" style="flex:1"><label>Cantidad de tramos</label><input id="f-tramos" type="number" min="0" class="input" data-bind="form.tramos" value="${esc(f.tramos)}" placeholder="0" /></div>
+          <div class="field" style="flex:1"><label>Cantidad de tramos</label><input id="f-tramos" type="text" inputmode="numeric" pattern="[0-9]*" class="input" data-bind="form.tramos" value="${esc(f.tramos)}" placeholder="0" /></div>
           <div class="field" style="flex:1"><label>Monto abonado</label>
             <div style="position:relative">
               <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:color-mix(in srgb, var(--color-text) 55%, transparent)">$</span>
-              <input id="f-monto" type="number" min="0" step="any" class="input" style="padding-left:24px" data-bind="form.monto" value="${esc(f.monto)}" placeholder="0" />
+              <input id="f-monto" type="text" inputmode="decimal" class="input" style="padding-left:24px" data-bind="form.monto" value="${esc(f.monto)}" placeholder="0" />
             </div>
           </div>
         </div>
@@ -355,8 +355,8 @@
         <div class="field"><label>Nombre y apellido</label><input id="e-nombre" class="input" data-bind="editingContact.nombre" value="${esc(ec.nombre)}" required /></div>
         <div class="field"><label>Barrio</label><input id="e-barrio" class="input" data-bind="editingContact.barrio" value="${esc(ec.barrio)}" /></div>
         <div style="display:flex;gap:12px">
-          <div class="field" style="flex:1"><label>Tramos</label><input id="e-tramos" type="number" min="0" class="input" data-bind="editingContact.tramos" value="${esc(ec.tramos)}" /></div>
-          <div class="field" style="flex:1"><label>Monto abonado</label><input id="e-monto" type="number" min="0" step="any" class="input" data-bind="editingContact.monto" value="${esc(ec.monto)}" /></div>
+          <div class="field" style="flex:1"><label>Tramos</label><input id="e-tramos" type="text" inputmode="numeric" pattern="[0-9]*" class="input" data-bind="editingContact.tramos" value="${esc(ec.tramos)}" /></div>
+          <div class="field" style="flex:1"><label>Monto abonado</label><input id="e-monto" type="text" inputmode="decimal" class="input" data-bind="editingContact.monto" value="${esc(ec.monto)}" /></div>
         </div>
         <div class="field"><label>Email</label><input id="e-mail" type="email" class="input" data-bind="editingContact.mail" value="${esc(ec.mail)}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" /></div>
         <div class="field"><label>Teléfono</label><input id="e-telefono" type="tel" class="input" data-bind="editingContact.telefono" value="${esc(ec.telefono)}" /></div>
