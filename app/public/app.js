@@ -201,7 +201,7 @@
             </div>
           </div>
         </div>
-        <div class="field"><label>Email</label><input id="f-mail" type="email" class="input" data-bind="form.mail" value="${esc(f.mail)}" placeholder="nombre@mail.com" /></div>
+        <div class="field"><label>Email</label><input id="f-mail" type="email" class="input" data-bind="form.mail" value="${esc(f.mail)}" placeholder="nombre@mail.com" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" /></div>
         <div class="field"><label>Teléfono</label><input id="f-telefono" type="tel" class="input" data-bind="form.telefono" value="${esc(f.telefono)}" placeholder="11 1234-5678" /></div>
         <div class="field"><label>Fecha</label><input id="f-fecha" type="date" class="input" data-bind="form.fecha" value="${esc(f.fecha)}" /></div>
         <div class="field">
@@ -358,7 +358,7 @@
           <div class="field" style="flex:1"><label>Tramos</label><input id="e-tramos" type="number" min="0" class="input" data-bind="editingContact.tramos" value="${esc(ec.tramos)}" /></div>
           <div class="field" style="flex:1"><label>Monto abonado</label><input id="e-monto" type="number" min="0" step="any" class="input" data-bind="editingContact.monto" value="${esc(ec.monto)}" /></div>
         </div>
-        <div class="field"><label>Email</label><input id="e-mail" type="email" class="input" data-bind="editingContact.mail" value="${esc(ec.mail)}" /></div>
+        <div class="field"><label>Email</label><input id="e-mail" type="email" class="input" data-bind="editingContact.mail" value="${esc(ec.mail)}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" /></div>
         <div class="field"><label>Teléfono</label><input id="e-telefono" type="tel" class="input" data-bind="editingContact.telefono" value="${esc(ec.telefono)}" /></div>
         <div class="field"><label>Fecha</label><input id="e-fecha" type="date" class="input" data-bind="editingContact.fecha" value="${esc(ec.fecha)}" /></div>
         <div class="field">
@@ -604,6 +604,8 @@
     } catch (err) {
       state.syncStatus = 'No se pudo sincronizar.';
     }
+    const active = document.activeElement;
+    if (active && active.dataset && active.dataset.bind) return;
     render();
   }
   function setupPolling() {
@@ -703,7 +705,7 @@
     }
   });
 
-  const NO_RERENDER_FIELDS = ['nombre', 'barrio', 'mail', 'telefono'];
+  const NO_RERENDER_FIELDS = ['nombre', 'barrio', 'mail', 'telefono', 'tramos', 'monto'];
   root.addEventListener('input', (e) => {
     const bind = e.target.dataset.bind;
     if (!bind) return;
