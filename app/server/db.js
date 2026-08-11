@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS contacts (
   dias JSONB DEFAULT '[]'::jsonb,
   horario_ida TEXT DEFAULT '',
   horario_vuelta TEXT DEFAULT '',
+  horarios_dias JSONB DEFAULT '{}'::jsonb,
+  en_tramos BOOLEAN NOT NULL DEFAULT true,
   created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -44,6 +46,8 @@ CREATE TABLE IF NOT EXISTS contacts (
 
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS horario_ida TEXT DEFAULT '';
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS horario_vuelta TEXT DEFAULT '';
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS horarios_dias JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS en_tramos BOOLEAN NOT NULL DEFAULT true;
 
 CREATE TABLE IF NOT EXISTS push_subscriptions (
   id SERIAL PRIMARY KEY,

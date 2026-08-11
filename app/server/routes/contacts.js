@@ -8,7 +8,7 @@ router.use(requireAuth);
 
 const DIAS_VALID = new Set(['lun', 'mar', 'mie', 'jue', 'vie']);
 const TIPO_VALID = new Set(['ida', 'vuelta', 'ambos']);
-const ESTADO_VALID = new Set(['pendiente', 'pagado']);
+const ESTADO_VALID = new Set(['pendiente', 'pagado', 'renovar']);
 
 function serialize(row) {
   return {
@@ -25,9 +25,25 @@ function serialize(row) {
     dias: Array.isArray(row.dias) ? row.dias : [],
     horarioIda: row.horario_ida || '',
     horarioVuelta: row.horario_vuelta || '',
+    horariosDias: row.horarios_dias && typeof row.horarios_dias === 'object' ? row.horarios_dias : {},
+    enTramos: row.en_tramos !== false,
     createdBy: row.created_by,
     updatedAt: row.updated_at
   };
+}
+
+function sanitizeHorariosDias(v) {
+  const out = {};
+  if (v && typeof v === 'object') {
+    for (const dia of Object.keys(v)) {
+      if (!DIAS_VALID.has(dia)) continue;
+      const entry = v[dia] || {};
+      const ida = String(entry.ida || '').trim().slice(0, 5);
+      const vuelta = String(entry.vuelta || '').trim().slice(0, 5);
+      if (ida || vuelta) out[dia] = { ida, vuelta };
+    }
+  }
+  return out;
 }
 
 function sanitizeInput(body) {
@@ -44,7 +60,9 @@ function sanitizeInput(body) {
     tipoViaje: TIPO_VALID.has(body.tipoViaje) ? body.tipoViaje : 'ambos',
     dias,
     horarioIda: String(body.horarioIda || '').trim().slice(0, 5),
-    horarioVuelta: String(body.horarioVuelta || '').trim().slice(0, 5)
+    horarioVuelta: String(body.horarioVuelta || '').trim().slice(0, 5),
+    horariosDias: sanitizeHorariosDias(body.horariosDias),
+    enTramos: body.enTramos === false ? false : true
   };
 }
 
@@ -76,9 +94,9 @@ router.post('/', async (req, res) => {
   if (!data.nombre) return res.status(400).json({ error: 'El nombre es obligatorio.' });
   try {
     const { rows } = await pool.query(
-      `INSERT INTO contacts (workspace_id, nombre, barrio, tramos, mail, telefono, monto, estado, fecha, tipo_viaje, dias, horario_ida, horario_vuelta, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
-      [req.workspaceId, data.nombre, data.barrio, data.tramos, data.mail, data.telefono, data.monto, data.estado, data.fecha, data.tipoViaje, JSON.stringify(data.dias), data.horarioIda, data.horarioVuelta, req.userId]
+      `INSERT INTO contacts (workspace_id, nombre, barrio, tramos, mail, telefono, monto, estado, fecha, tipo_viaje, dias, horario_ida, horario_vuelta, horarios_dias, en_tramos, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
+      [req.workspaceId, data.nombre, data.barrio, data.tramos, data.mail, data.telefono, data.monto, data.estado, data.fecha, data.tipoViaje, JSON.stringify(data.dias), data.horarioIda, data.horarioVuelta, JSON.stringify(data.horariosDias), data.enTramos, req.userId]
     );
     const contact = rows[0];
     res.status(201).json({ contact: serialize(contact) });
@@ -100,9 +118,9 @@ router.put('/:id', async (req, res) => {
   if (!data.nombre) return res.status(400).json({ error: 'El nombre es obligatorio.' });
   try {
     const { rows } = await pool.query(
-      `UPDATE contacts SET nombre=$1, barrio=$2, tramos=$3, mail=$4, telefono=$5, monto=$6, estado=$7, fecha=$8, tipo_viaje=$9, dias=$10, horario_ida=$11, horario_vuelta=$12, updated_at=now()
-       WHERE id=$13 AND workspace_id=$14 RETURNING *`,
-      [data.nombre, data.barrio, data.tramos, data.mail, data.telefono, data.monto, data.estado, data.fecha, data.tipoViaje, JSON.stringify(data.dias), data.horarioIda, data.horarioVuelta, req.params.id, req.workspaceId]
+      `UPDATE contacts SET nombre=$1, barrio=$2, tramos=$3, mail=$4, telefono=$5, monto=$6, estado=$7, fecha=$8, tipo_viaje=$9, dias=$10, horario_ida=$11, horario_vuelta=$12, horarios_dias=$13, en_tramos=$14, updated_at=now()
+       WHERE id=$15 AND workspace_id=$16 RETURNING *`,
+      [data.nombre, data.barrio, data.tramos, data.mail, data.telefono, data.monto, data.estado, data.fecha, data.tipoViaje, JSON.stringify(data.dias), data.horarioIda, data.horarioVuelta, JSON.stringify(data.horariosDias), data.enTramos, req.params.id, req.workspaceId]
     );
     if (!rows.length) return res.status(404).json({ error: 'Contacto no encontrado.' });
     res.json({ contact: serialize(rows[0]) });
@@ -113,11 +131,13 @@ router.put('/:id', async (req, res) => {
 });
 
 // PATCH /:id/tramos { delta: 1 | -1 } - used by the "Tramos" tab +/- controls.
+// Bumping tramos back up automatically re-shows the contact in the Tramos tab
+// if it had been taken out after reaching 0.
 router.patch('/:id/tramos', async (req, res) => {
   const delta = Number(req.body && req.body.delta) || 0;
   try {
     const { rows } = await pool.query(
-      `UPDATE contacts SET tramos = GREATEST(0, tramos + $1), updated_at = now()
+      `UPDATE contacts SET tramos = GREATEST(0, tramos + $1), en_tramos = CASE WHEN $1 > 0 THEN true ELSE en_tramos END, updated_at = now()
        WHERE id = $2 AND workspace_id = $3 RETURNING *`,
       [delta, req.params.id, req.workspaceId]
     );
@@ -126,6 +146,24 @@ router.patch('/:id/tramos', async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'No se pudo ajustar los tramos.' });
+  }
+});
+
+// PATCH /:id/en-tramos { enTramos: true | false } - shows/hides a contact from
+// the "Tramos" tab without ever deleting it from Contactos.
+router.patch('/:id/en-tramos', async (req, res) => {
+  const enTramos = req.body && req.body.enTramos === false ? false : true;
+  try {
+    const { rows } = await pool.query(
+      `UPDATE contacts SET en_tramos = $1, updated_at = now()
+       WHERE id = $2 AND workspace_id = $3 RETURNING *`,
+      [enTramos, req.params.id, req.workspaceId]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Contacto no encontrado.' });
+    res.json({ contact: serialize(rows[0]) });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'No se pudo actualizar el estado de tramos.' });
   }
 });
 
