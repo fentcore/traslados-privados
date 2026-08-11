@@ -231,7 +231,7 @@
   .van-seats { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 8px; }
   .van-row { display: flex; gap: 8px; justify-content: center; }
   .van-row:not(:first-child) { padding-top: 8px; border-top: 1px dashed var(--color-border); }
-  .van-row[data-row="2"] { justify-content: flex-start; }
+  .van-row[data-row="2"], .van-row[data-row="3"], .van-row[data-row="4"] { justify-content: flex-start; }
   .van-driver {
     width: 46px; aspect-ratio: 1; border-radius: var(--radius-sm); border: 1px dashed var(--color-border-strong);
     display: flex; align-items: center; justify-content: center; text-align: center; flex: none;
@@ -257,6 +257,22 @@
   .van-dot.occupied { background: transparent; border: 1px dashed var(--color-border-strong); }
 
   .summary-status { font-size: 14px; color: var(--color-text-muted); margin: 0 0 14px; }
+
+  .exception-toggle {
+    align-self: flex-start; background: none; border: none; color: var(--color-accent);
+    font: inherit; font-weight: 600; font-size: 13px; cursor: pointer; padding: 4px 0;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  .exception-toggle:hover { opacity: .8; }
+  .exception-body {
+    display: flex; flex-direction: column; gap: var(--space-3); margin-top: 2px;
+    padding: 16px; border: 1px dashed var(--color-border-strong); border-radius: var(--radius-md);
+    background: var(--color-bg-alt);
+  }
+  .exception-row { display: flex; flex-direction: column; gap: 6px; }
+  .exception-row label { font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-muted); font-weight: 600; }
+  .exception-row p { font-size: 13px; color: var(--color-text-muted); margin: 0; }
+  .seg-sm button { padding: 8px 14px; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -435,6 +451,29 @@
                   <ellipse class="van-wheel" cx="248" cy="300" rx="7" ry="15"/>
                 </svg>
                 <div class="van-plan-label">Frente</div><div class="van-seats" id="van-seats-regreso"></div></div>
+
+                <button type="button" class="exception-toggle" id="regreso-exception-toggle">+ Un día vuelvo en otro horario</button>
+                <div class="exception-body" id="regreso-exception-body" style="display: none;">
+                  <div class="exception-row" id="regreso-exception-dias-row">
+                    <label>¿Qué día volvés distinto?</label>
+                    <div class="seg seg-sm" id="regreso-exception-dias"></div>
+                  </div>
+                  <div class="exception-row">
+                    <label>¿A qué horario?</label>
+                    <div class="van-tabs" id="van-tabs-regreso-alt"></div>
+                  </div>
+                  <div class="van-plan"><svg class="van-outline" viewBox="0 0 260 360" preserveAspectRatio="none" aria-hidden="true">
+                    <path class="van-body" d="M75,0 L185,0 A75,75 0 0 1 260,75 L260,344 A16,16 0 0 1 244,360 L16,360 A16,16 0 0 1 0,344 L0,75 A75,75 0 0 1 75,0 Z"/>
+                    <path class="van-windshield" d="M16,88 Q130,68 244,88"/>
+                    <rect class="van-mirror" x="-12" y="62" width="12" height="24" rx="4"/>
+                    <rect class="van-mirror" x="260" y="62" width="12" height="24" rx="4"/>
+                    <ellipse class="van-wheel" cx="12" cy="140" rx="7" ry="15"/>
+                    <ellipse class="van-wheel" cx="248" cy="140" rx="7" ry="15"/>
+                    <ellipse class="van-wheel" cx="12" cy="300" rx="7" ry="15"/>
+                    <ellipse class="van-wheel" cx="248" cy="300" rx="7" ry="15"/>
+                  </svg>
+                  <div class="van-plan-label">Frente</div><div class="van-seats" id="van-seats-regreso-alt"></div></div>
+                </div>
               </div>
             </div>
             <div class="van-legend" style="margin-top: 4px;">
@@ -526,6 +565,11 @@
   var selectedIda = new Set();
   var selectedRegreso = new Set();
   var selectedDias = new Set();
+
+  var exceptionOpen = false;
+  var exceptionDia = '';
+  var exceptionHorario = '';
+  var selectedExceptionSeats = new Set();
 
   function esc(v) {
     return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
@@ -627,6 +671,43 @@
     updateStatus();
   }
 
+  function renderExceptionDias() {
+    var el = document.getElementById('regreso-exception-dias');
+    var days = DIA_ORDER.filter(function (d) { return selectedDias.has(d); });
+    if (!days.length) {
+      el.innerHTML = '<p>Elegí primero los días arriba.</p>';
+      return;
+    }
+    el.innerHTML = days.map(function (d) {
+      return '<button type="button" data-dia="' + esc(d) + '" class="' + (d === exceptionDia ? 'active' : '') + '">' + esc(DIA_LABELS[d]) + '</button>';
+    }).join('');
+  }
+
+  function selectExceptionHorario(key) {
+    exceptionHorario = key;
+    selectedExceptionSeats = new Set();
+    renderLegTabs('salida', exceptionHorario, 'van-tabs-regreso-alt');
+    renderLegSeats(exceptionHorario, selectedExceptionSeats, 'van-seats-regreso-alt');
+    updateStatus();
+  }
+
+  function ensureExceptionAltHorario() {
+    if (exceptionHorario) return;
+    var altMaps = mapsFor('salida');
+    if (!altMaps.length) return;
+    var defaultAlt = altMaps.filter(function (m) { return m.horarioKey !== currentRegreso; })[0] || altMaps[0];
+    selectExceptionHorario(defaultAlt.horarioKey);
+  }
+
+  function closeException() {
+    exceptionOpen = false;
+    exceptionDia = '';
+    exceptionHorario = '';
+    selectedExceptionSeats = new Set();
+    document.getElementById('regreso-exception-body').style.display = 'none';
+    document.getElementById('regreso-exception-toggle').textContent = '+ Un día vuelvo en otro horario';
+  }
+
   function showLegs() {
     var needIda = tipoViaje === 'ida' || tipoViaje === 'ambos';
     var needRegreso = tipoViaje === 'regreso' || tipoViaje === 'ambos';
@@ -674,6 +755,11 @@
       disableLink();
       return;
     }
+    if (needRegreso && exceptionOpen && (!exceptionDia || !exceptionHorario || selectedExceptionSeats.size === 0)) {
+      statusEl.textContent = 'Elegí el día, el horario y el asiento para tu regreso en otro horario.';
+      disableLink();
+      return;
+    }
 
     var diasText = diasListText();
     var summaryParts = [];
@@ -689,8 +775,21 @@
       var seatsRegreso = seatListText(selectedRegreso);
       var stopTime = stopTimeFor(barrio, currentRegreso);
       var stopText = stopTime ? ' (parada en ' + barrio + ' ' + stopTime + ')' : '';
-      summaryParts.push('Regreso: ' + mapRegreso.horarioLabel + stopText + ', asiento(s) ' + seatsRegreso);
-      msgParts.push('Regreso "' + mapRegreso.horarioLabel + '"' + stopText + ', asiento(s) ' + seatsRegreso);
+      var regresoDiasText = DIA_ORDER.filter(function (d) { return selectedDias.has(d) && d !== exceptionDia; }).map(function (d) { return DIA_LABELS[d]; }).join(', ');
+      var regresoSummary = 'Regreso: ' + mapRegreso.horarioLabel + stopText + ', asiento(s) ' + seatsRegreso;
+      var regresoMsg = 'Regreso "' + mapRegreso.horarioLabel + '"' + stopText + ', asiento(s) ' + seatsRegreso;
+      if (exceptionOpen && exceptionDia && exceptionHorario) {
+        var mapExc = mapByKey(exceptionHorario);
+        var seatsExc = seatListText(selectedExceptionSeats);
+        var excStopTime = stopTimeFor(barrio, exceptionHorario);
+        var excStopText = excStopTime ? ' (parada en ' + barrio + ' ' + excStopTime + ')' : '';
+        var diasPrefix = regresoDiasText ? ' los ' + regresoDiasText + ';' : '';
+        var diasPrefixMsg = regresoDiasText ? ' los días ' + regresoDiasText + ',' : '';
+        regresoSummary += diasPrefix + ' el ' + DIA_LABELS[exceptionDia] + ' vuelve ' + mapExc.horarioLabel + excStopText + ', asiento(s) ' + seatsExc;
+        regresoMsg += diasPrefixMsg + ' y el ' + DIA_LABELS[exceptionDia] + ' vuelve en horario "' + mapExc.horarioLabel + '"' + excStopText + ', asiento(s) ' + seatsExc;
+      }
+      summaryParts.push(regresoSummary);
+      msgParts.push(regresoMsg);
     }
 
     statusEl.textContent = nombre + ' (' + barrio + ') — Días: ' + diasText + ' — ' + summaryParts.join(' · ') + '.';
@@ -717,6 +816,46 @@
     var d = btn.dataset.dia;
     if (selectedDias.has(d)) selectedDias.delete(d); else selectedDias.add(d);
     btn.classList.toggle('active', selectedDias.has(d));
+    if (exceptionDia && !selectedDias.has(exceptionDia)) exceptionDia = '';
+    if (exceptionOpen) renderExceptionDias();
+    updateStatus();
+  });
+
+  document.getElementById('regreso-exception-toggle').addEventListener('click', function () {
+    exceptionOpen = !exceptionOpen;
+    var body = document.getElementById('regreso-exception-body');
+    if (exceptionOpen) {
+      body.style.display = 'flex';
+      this.textContent = '– No vuelvo en otro horario';
+      renderExceptionDias();
+      ensureExceptionAltHorario();
+    } else {
+      closeException();
+    }
+    updateStatus();
+  });
+
+  document.getElementById('regreso-exception-dias').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-dia]');
+    if (!btn) return;
+    exceptionDia = btn.dataset.dia;
+    renderExceptionDias();
+    ensureExceptionAltHorario();
+    updateStatus();
+  });
+
+  document.getElementById('van-tabs-regreso-alt').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-key]');
+    if (!btn) return;
+    selectExceptionHorario(btn.dataset.key);
+  });
+
+  document.getElementById('van-seats-regreso-alt').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-seat]');
+    if (!btn || btn.disabled) return;
+    var id = btn.dataset.seat;
+    if (selectedExceptionSeats.has(id)) selectedExceptionSeats.delete(id); else selectedExceptionSeats.add(id);
+    renderLegSeats(exceptionHorario, selectedExceptionSeats, 'van-seats-regreso-alt');
     updateStatus();
   });
 
@@ -752,6 +891,7 @@
   document.getElementById('van-barrio').addEventListener('change', function () {
     if (currentIda) renderLegTabs('ingreso', currentIda, 'van-tabs-ida');
     if (currentRegreso) renderLegTabs('salida', currentRegreso, 'van-tabs-regreso');
+    if (exceptionOpen && exceptionHorario) renderLegTabs('salida', exceptionHorario, 'van-tabs-regreso-alt');
     updateStatus();
   });
 
@@ -766,6 +906,10 @@
         document.getElementById('van-status').textContent = 'No hay horarios configurados todavía.';
         return;
       }
+      if (tipoViaje) showLegs();
+      if (currentIda) renderLegTabs('ingreso', currentIda, 'van-tabs-ida');
+      if (currentRegreso) renderLegTabs('salida', currentRegreso, 'van-tabs-regreso');
+      if (exceptionOpen) ensureExceptionAltHorario();
       updateStatus();
     })
     .catch(function () {
