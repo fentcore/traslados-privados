@@ -994,6 +994,7 @@
   function seatStillNeeded(horarioKey, seatId, excludeContactId) {
     return state.contacts.some((c) => {
       if (String(c.id) === String(excludeContactId)) return false;
+      if (c.activoTramos === false) return false; // matches occupantsForDay: contacts hidden from Tramos don't hold the seat either
       return asientoSeatPairs(c.asientos).some(([hk, sid]) => hk === horarioKey && sid === seatId);
     });
   }
