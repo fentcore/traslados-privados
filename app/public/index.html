@@ -413,6 +413,23 @@
         <div class="booking-step is-active">
           <div class="step-num">2</div>
           <div class="step-body">
+            <div class="step-title">Plan de tramos</div>
+            <div class="seg" id="van-plan-tipo">
+              <button type="button" data-plan="individual">Individual</button>
+              <button type="button" data-plan="promo20">Promo 20 tramos</button>
+              <button type="button" data-plan="promo30">Promo 30 tramos</button>
+            </div>
+            <div class="field" id="van-plan-individual-field" style="margin-top: 14px; max-width: 220px; display: none;">
+              <label for="van-plan-cantidad">Cantidad de tramos</label>
+              <input type="number" id="van-plan-cantidad" min="1" step="1" placeholder="Ej: 8" />
+            </div>
+            <p class="summary-status" id="van-plan-total" style="margin: 14px 0 0;"></p>
+          </div>
+        </div>
+
+        <div class="booking-step is-active">
+          <div class="step-num">3</div>
+          <div class="step-body">
             <div class="step-title">Tipo de viaje</div>
             <div class="seg" id="van-tipo">
               <button type="button" data-tipo="ida">Ida</button>
@@ -423,7 +440,7 @@
         </div>
 
         <div class="booking-step is-disabled" id="step-legs">
-          <div class="step-num">3</div>
+          <div class="step-num">4</div>
           <div class="step-body">
             <div class="step-title">Horario y asiento</div>
             <div id="van-legs">
@@ -477,7 +494,7 @@
         </div>
 
         <div class="booking-step" id="step-summary">
-          <div class="step-num">4</div>
+          <div class="step-num">5</div>
           <div class="step-body">
             <div class="step-title">Confirmar</div>
             <p id="van-status" class="summary-status"></p>
@@ -549,6 +566,47 @@
 
   var DIA_LABELS = { lun: 'Lunes', mar: 'Martes', mie: 'Miércoles', jue: 'Jueves', vie: 'Viernes' };
   var DIA_ORDER = ['lun', 'mar', 'mie', 'jue', 'vie'];
+
+  var PLAN_PRECIO_TRAMO = 4000;
+  var PLAN_PROMOS = {
+    promo20: { tramos: 20, total: 72000 },
+    promo30: { tramos: 30, total: 108000 }
+  };
+  var planTipo = '';
+
+  function formatMoney(n) {
+    return '$' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+  function getPlanCantidad() {
+    var el = document.getElementById('van-plan-cantidad');
+    var v = el ? parseInt(el.value, 10) : NaN;
+    return v > 0 ? v : 0;
+  }
+  function buildPlanSummary() {
+    if (planTipo === 'individual') {
+      var cant = getPlanCantidad();
+      if (!cant) return null;
+      var total = cant * PLAN_PRECIO_TRAMO;
+      return {
+        summary: cant + ' tramo(s) individuales — ' + formatMoney(total),
+        msg: cant + ' tramo(s) individuales, total ' + formatMoney(total)
+      };
+    }
+    if (PLAN_PROMOS[planTipo]) {
+      var promo = PLAN_PROMOS[planTipo];
+      return {
+        summary: 'Promoción ' + promo.tramos + ' tramos — ' + formatMoney(promo.total),
+        msg: 'Promoción de ' + promo.tramos + ' tramos, total ' + formatMoney(promo.total)
+      };
+    }
+    return null;
+  }
+  function renderPlanTotal() {
+    var el = document.getElementById('van-plan-total');
+    if (!planTipo) { el.textContent = ''; return; }
+    var built = buildPlanSummary();
+    el.textContent = built ? built.summary + '.' : 'Ingresá la cantidad de tramos.';
+  }
 
   var seatMaps = [];
   var tipoViaje = '';
@@ -815,6 +873,11 @@
       disableLink();
       return;
     }
+    if (!planTipo || (planTipo === 'individual' && getPlanCantidad() === 0)) {
+      statusEl.textContent = 'Elegí un plan de tramos (individual o promoción) para continuar.';
+      disableLink();
+      return;
+    }
     var legsNeeded = [];
     if (needIda) legsNeeded.push('ida');
     if (needRegreso) legsNeeded.push('regreso');
@@ -842,13 +905,32 @@
       msgParts.push(built.msg);
     });
 
-    statusEl.textContent = nombre + ' (' + barrio + ') — Días: ' + diasText + ' — ' + summaryParts.join(' · ') + '.';
+    var planBuilt = buildPlanSummary();
+
+    statusEl.textContent = nombre + ' (' + barrio + ') — Días: ' + diasText + ' — ' + summaryParts.join(' · ') + '. Plan: ' + planBuilt.summary + '.';
     linkEl.style.pointerEvents = 'auto';
     linkEl.style.opacity = '1';
     document.getElementById('step-summary').classList.add('is-active');
-    var msg = '¡Hola! Estoy interesad@ en contratar el servicio para "' + nombre + '" (barrio ' + barrio + '). Días: ' + diasText + '. Quiero reservar: ' + msgParts.join('; ') + '.';
+    var msg = '¡Hola! Estoy interesad@ en contratar el servicio para "' + nombre + '" (barrio ' + barrio + '). Días: ' + diasText + '. Quiero reservar: ' + msgParts.join('; ') + '. Plan: ' + planBuilt.msg + '.';
     linkEl.href = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(msg);
   }
+
+  document.getElementById('van-plan-tipo').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-plan]');
+    if (!btn) return;
+    planTipo = btn.dataset.plan;
+    Array.prototype.forEach.call(document.querySelectorAll('#van-plan-tipo button'), function (b) {
+      b.classList.toggle('active', b.dataset.plan === planTipo);
+    });
+    document.getElementById('van-plan-individual-field').style.display = planTipo === 'individual' ? 'flex' : 'none';
+    renderPlanTotal();
+    updateStatus();
+  });
+
+  document.getElementById('van-plan-cantidad').addEventListener('input', function () {
+    renderPlanTotal();
+    updateStatus();
+  });
 
   document.getElementById('van-tipo').addEventListener('click', function (e) {
     var btn = e.target.closest('button[data-tipo]');
