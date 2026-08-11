@@ -618,8 +618,46 @@
     return { label: 'Pendiente', bg: 'var(--color-neutral-100)', fg: 'var(--color-neutral-800)' };
   }
 
+  function contactRow(c) {
+    return `
+    <tr data-action="view-contact" data-id="${c.id}" style="cursor:pointer">
+      <td style="font-weight:500;white-space:nowrap">${esc(c.nombre)}</td>
+      <td style="white-space:nowrap">${esc(c.barrio)}</td>
+      <td style="text-align:center">${c.tramos}</td>
+      <td style="text-align:right;white-space:nowrap">${fmtMoney(c.monto)}</td>
+      <td style="white-space:nowrap">${fmtFecha(c.fecha)}</td>
+      <td style="white-space:nowrap">${tipoLabel(c.tipoViaje)}</td>
+      <td><span class="status-pill" data-action="toggle-estado" data-id="${c.id}" style="background:${estadoInfo(c.estado).bg};color:${estadoInfo(c.estado).fg}">${estadoInfo(c.estado).label}</span></td>
+      <td><div class="row-actions">
+        <button type="button" class="edit" data-action="edit-contact" data-id="${c.id}">Editar</button>
+        <button type="button" class="delete" data-action="delete-contact" data-id="${c.id}">Eliminar</button>
+      </div></td>
+    </tr>`;
+  }
+
+  function contactTable(rows, arrow, sortable) {
+    return `
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr>
+          <th ${sortable ? 'class="sortable" data-action="sort" data-key="nombre"' : ''}>Nombre${sortable ? arrow('nombre') : ''}</th>
+          <th ${sortable ? 'class="sortable" data-action="sort" data-key="barrio"' : ''}>Barrio${sortable ? arrow('barrio') : ''}</th>
+          <th ${sortable ? 'class="sortable" data-action="sort" data-key="tramos"' : ''} style="text-align:center">Tramos${sortable ? arrow('tramos') : ''}</th>
+          <th ${sortable ? 'class="sortable" data-action="sort" data-key="monto"' : ''} style="text-align:right">Monto${sortable ? arrow('monto') : ''}</th>
+          <th ${sortable ? 'class="sortable" data-action="sort" data-key="fecha"' : ''}>Fecha${sortable ? arrow('fecha') : ''}</th>
+          <th>Viaje</th>
+          <th>Estado</th>
+          <th></th>
+        </tr></thead>
+        <tbody>${rows.map(c => contactRow(c)).join('')}</tbody>
+      </table>
+    </div>`;
+  }
+
   function renderListView() {
     const rows = getFilteredSorted();
+    const activeRows = rows.filter(c => Number(c.tramos) > 0);
+    const zeroRows = rows.filter(c => Number(c.tramos) === 0);
     const total = state.contacts.length;
     const totalMonto = state.contacts.reduce((s, c) => s + (Number(c.monto) || 0), 0);
     const pendientes = state.contacts.filter(c => c.estado !== 'pagado').length;
@@ -654,37 +692,14 @@
           ${segOpt('filter', 'tipo', 'ambos', 'Ambos', state.filterTipo)}
         </div>
       </div>
-      <div class="table-wrap">
-        <table class="table">
-          <thead><tr>
-            <th class="sortable" data-action="sort" data-key="nombre">Nombre${arrow('nombre')}</th>
-            <th class="sortable" data-action="sort" data-key="barrio">Barrio${arrow('barrio')}</th>
-            <th class="sortable" data-action="sort" data-key="tramos" style="text-align:center">Tramos${arrow('tramos')}</th>
-            <th class="sortable" data-action="sort" data-key="monto" style="text-align:right">Monto${arrow('monto')}</th>
-            <th class="sortable" data-action="sort" data-key="fecha">Fecha${arrow('fecha')}</th>
-            <th>Viaje</th>
-            <th>Estado</th>
-            <th></th>
-          </tr></thead>
-          <tbody>
-            ${rows.map(c => `
-            <tr data-action="view-contact" data-id="${c.id}" style="cursor:pointer">
-              <td style="font-weight:500;white-space:nowrap">${esc(c.nombre)}</td>
-              <td style="white-space:nowrap">${esc(c.barrio)}</td>
-              <td style="text-align:center">${c.tramos}</td>
-              <td style="text-align:right;white-space:nowrap">${fmtMoney(c.monto)}</td>
-              <td style="white-space:nowrap">${fmtFecha(c.fecha)}</td>
-              <td style="white-space:nowrap">${tipoLabel(c.tipoViaje)}</td>
-              <td><span class="status-pill" data-action="toggle-estado" data-id="${c.id}" style="background:${estadoInfo(c.estado).bg};color:${estadoInfo(c.estado).fg}">${estadoInfo(c.estado).label}</span></td>
-              <td><div class="row-actions">
-                <button type="button" class="edit" data-action="edit-contact" data-id="${c.id}">Editar</button>
-                <button type="button" class="delete" data-action="delete-contact" data-id="${c.id}">Eliminar</button>
-              </div></td>
-            </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>
-      ${rows.length === 0 ? '<div class="empty-note">No se encontraron contactos.</div>' : ''}
+      ${contactTable(activeRows, arrow, true)}
+      ${activeRows.length === 0 ? '<div class="empty-note">No se encontraron contactos.</div>' : ''}
+      ${zeroRows.length ? `
+      <div style="margin-top:8px">
+        <div style="font-family:var(--font-heading);font-weight:600;font-size:16px">Sin tramos (${zeroRows.length})</div>
+        <div class="text-muted" style="font-size:12.5px;margin-bottom:10px">Se quedaron en 0 — renová sus tramos o dejalos acá hasta que lo hagan.</div>
+        ${contactTable(zeroRows, arrow, false)}
+      </div>` : ''}
       <div class="sync-status">${esc(state.syncStatus)}</div>
     </div>`;
   }
