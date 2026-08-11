@@ -46,6 +46,7 @@
     confirmZeroTramos: null,
     seatMaps: [],
     seatMapView: '',
+    seatMapDia: '', // '' = ocupacion general (todos los dias); 'lun'..'vie' = ver ese dia puntual
     accountOpen: false,
     deferredInstallPrompt: null,
     pushState: 'unknown', // unknown | unsupported | default | denied | subscribed
@@ -147,6 +148,41 @@
     });
   }
 
+  // ---------- day-accurate occupancy (computed from contacts, not the
+  // shared seat_maps.occupied flag which doesn't know about days) ----------
+  function contactSeatsForDay(contact, horarioKey, dia) {
+    const ids = new Set();
+    if (!contact.dias || !contact.dias.includes(dia)) return ids;
+    const asientos = contact.asientos || {};
+    ['ida', 'vuelta'].forEach((leg) => {
+      const a = asientos[leg];
+      if (!a) return;
+      const ex = a.exceptions && a.exceptions[dia];
+      if (ex) {
+        if (ex.horarioKey === horarioKey) (ex.seats || []).forEach((s) => ids.add(s));
+      } else if (a.horarioKey === horarioKey) {
+        (a.seats || []).forEach((s) => ids.add(s));
+      }
+    });
+    return ids;
+  }
+
+  function occupantsForDay(horarioKey, dia) {
+    const list = [];
+    state.contacts.forEach((c) => {
+      if (c.activoTramos === false) return;
+      const seats = contactSeatsForDay(c, horarioKey, dia);
+      if (seats.size) list.push({ nombre: c.nombre, seats: Array.from(seats).sort((a, b) => Number(a) - Number(b)) });
+    });
+    return list;
+  }
+
+  function occupiedSeatIdsForDay(horarioKey, dia) {
+    const ids = new Set();
+    occupantsForDay(horarioKey, dia).forEach((o) => o.seats.forEach((s) => ids.add(s)));
+    return ids;
+  }
+
   function vanOutlineSvg() {
     return `<svg class="van-outline" viewBox="0 0 260 360" preserveAspectRatio="none" aria-hidden="true">
       <path class="van-body" d="M75,0 L185,0 A75,75 0 0 1 260,75 L260,344 A16,16 0 0 1 244,360 L16,360 A16,16 0 0 1 0,344 L0,75 A75,75 0 0 1 75,0 Z"/>
@@ -156,17 +192,32 @@
     </svg>`;
   }
 
-  function pickSeatButton(s, selectedIds, scope) {
+  // Which seats are already taken for a horario, across a specific set of
+  // days — not just the flat horario-wide flag — so picking a seat for a
+  // new client only blocks seats actually taken on the day(s) they travel.
+  function computeLegOccupied(map, days) {
+    if (!map) return new Set();
+    if (!days || !days.length) {
+      return new Set(map.seats.filter((s) => s.occupied).map((s) => s.id));
+    }
+    const ids = new Set();
+    days.forEach((dia) => occupiedSeatIdsForDay(map.horarioKey, dia).forEach((s) => ids.add(s)));
+    return ids;
+  }
+
+  function pickSeatButton(s, selectedIds, scope, occupiedIds) {
     const isSelected = selectedIds.includes(s.id);
+    const isOccupied = occupiedIds.has(s.id);
     const cls = ['seat'];
     if (isSelected) cls.push('selected');
-    else if (s.occupied) cls.push('occupied');
-    const disabled = (s.occupied && !isSelected) ? 'disabled' : '';
+    else if (isOccupied) cls.push('occupied');
+    const disabled = (isOccupied && !isSelected) ? 'disabled' : '';
     return `<button type="button" class="${cls.join(' ')}" data-action="pick-seat" data-scope="${esc(scope)}" data-seat="${esc(s.id)}" ${disabled}>${esc(s.id)}</button>`;
   }
 
-  function renderSeatPlan(map, selectedIds, scope) {
+  function renderSeatPlan(map, selectedIds, scope, occupiedIds) {
     if (!map) return '<p class="text-muted" style="font-size:13px;margin:4px 0 0">Cargando asientos…</p>';
+    occupiedIds = occupiedIds || new Set(map.seats.filter((s) => s.occupied).map((s) => s.id));
     const byRow = {};
     map.seats.forEach((s) => { (byRow[s.row] = byRow[s.row] || []).push(s); });
     const rowNums = Object.keys(byRow).map(Number).sort((a, b) => a - b);
@@ -178,7 +229,7 @@
         ${rowNums.map((r) => `
         <div class="van-row" data-row="${r}">
           ${r === rowNums[0] ? '<div class="van-driver">Conductor</div>' : ''}
-          ${byRow[r].slice().sort((a, b) => a.col - b.col).map((s) => pickSeatButton(s, selectedIds, scope)).join('')}
+          ${byRow[r].slice().sort((a, b) => a.col - b.col).map((s) => pickSeatButton(s, selectedIds, scope, occupiedIds)).join('')}
         </div>`).join('')}
       </div>
     </div>`;
@@ -201,13 +252,15 @@
     }
     const current = seatMapByKey(a.horarioKey);
     const excDays = DIAS.filter((d) => (f.dias || []).includes(d.key));
+    const mainDays = excDays.filter((d) => !a.exceptions[d.key]).map((d) => d.key);
+    const occupiedIds = computeLegOccupied(current, mainDays.length ? mainDays : (f.dias || []));
     return `
     <div class="field">
       <label>${esc(label)}</label>
       <div class="van-tabs">
         ${maps.map((m) => `<button type="button" data-action="pick-horario" data-scope="${leg}" data-key="${esc(m.horarioKey)}" class="${m.horarioKey === a.horarioKey ? 'active' : ''}">${esc(m.horarioLabel)}</button>`).join('')}
       </div>
-      ${renderSeatPlan(current, a.seats, leg)}
+      ${renderSeatPlan(current, a.seats, leg, occupiedIds)}
       <div class="van-legend">
         <span><i class="van-dot free"></i>Libre</span>
         <span><i class="van-dot selected"></i>Seleccionado</span>
@@ -233,13 +286,15 @@
       ${excDays.filter((d) => a.exceptions[d.key]).map((d) => {
         const ex = a.exceptions[d.key];
         const scope = leg + ':' + d.key;
+        const exMap = seatMapByKey(ex.horarioKey);
+        const occupiedIds = computeLegOccupied(exMap, [d.key]);
         return `
         <div class="asiento-exception-day">
           <div class="asiento-exception-day-title">${esc(DIA_LABELS[d.key])}</div>
           <div class="van-tabs">
             ${maps.map((m) => `<button type="button" data-action="pick-horario" data-scope="${scope}" data-key="${esc(m.horarioKey)}" class="${m.horarioKey === ex.horarioKey ? 'active' : ''}">${esc(m.horarioLabel)}</button>`).join('')}
           </div>
-          ${renderSeatPlan(seatMapByKey(ex.horarioKey), ex.seats, scope)}
+          ${renderSeatPlan(exMap, ex.seats, scope, occupiedIds)}
         </div>`;
       }).join('')}
     </div>`;
@@ -458,24 +513,42 @@
     return `<button type="button" class="${cls.join(' ')}" data-action="toggle-seat" data-key="${esc(horarioKey)}" data-seat="${esc(s.id)}" data-occupied="${s.occupied ? '1' : ''}">${esc(s.id)}</button>`;
   }
 
+  function seatButtonReadOnly(s, occupiedIds) {
+    const cls = ['seat'];
+    if (occupiedIds.has(s.id)) cls.push('occupied');
+    return `<button type="button" class="${cls.join(' ')}" disabled>${esc(s.id)}</button>`;
+  }
+
   function renderAsientosView() {
     const maps = state.seatMaps;
     if (!maps.length) {
       return '<div class="view-pad"><div class="empty-note">Cargando asientos…</div></div>';
     }
     const current = maps.find(m => m.horarioKey === state.seatMapView) || maps[0];
+    const dia = state.seatMapDia;
     const byRow = {};
     current.seats.forEach(s => { (byRow[s.row] = byRow[s.row] || []).push(s); });
     const rowNums = Object.keys(byRow).map(Number).sort((a, b) => a - b);
-    const libres = current.seats.filter(s => !s.occupied).length;
+
+    const occupiedIds = dia ? occupiedSeatIdsForDay(current.horarioKey, dia) : null;
+    const libres = dia ? current.seats.filter(s => !occupiedIds.has(s.id)).length : current.seats.filter(s => !s.occupied).length;
+    const occupants = dia ? occupantsForDay(current.horarioKey, dia) : [];
+
     return `
     <div class="view-pad">
       <div>
         <div style="font-family:var(--font-heading);font-weight:600;font-size:20px">Asientos</div>
-        <div class="text-muted" style="font-size:12.5px">Tocá un asiento para marcarlo ocupado o libre. Se actualiza al instante en la página pública.</div>
+        <div class="text-muted" style="font-size:12.5px">${dia ? 'Vista de solo lectura: quién tiene asiento asignado ese día, calculado a partir de los clientes cargados.' : 'Tocá un asiento para marcarlo ocupado o libre. Se actualiza al instante en la página pública.'}</div>
       </div>
       <div class="van-tabs">
         ${maps.map(m => `<button type="button" data-action="set-seatmap" data-key="${esc(m.horarioKey)}" class="${m.horarioKey === current.horarioKey ? 'active' : ''}">${esc(m.horarioLabel)}</button>`).join('')}
+      </div>
+      <div class="field" style="margin:0">
+        <label>Ver ocupación</label>
+        <div class="van-tabs">
+          <button type="button" data-action="set-seat-dia" data-dia="" class="${!dia ? 'active' : ''}">General</button>
+          ${DIAS.map(d => `<button type="button" data-action="set-seat-dia" data-dia="${d.key}" class="${dia === d.key ? 'active' : ''}">${esc(DIA_LABELS[d.key])}</button>`).join('')}
+        </div>
       </div>
       <div class="van-wrap">
         <div class="van-plan">
@@ -485,7 +558,7 @@
             ${rowNums.map(r => `
             <div class="van-row" data-row="${r}">
               ${r === rowNums[0] ? '<div class="van-driver">Conductor</div>' : ''}
-              ${byRow[r].slice().sort((a, b) => a.col - b.col).map(s => seatButton(current.horarioKey, s)).join('')}
+              ${byRow[r].slice().sort((a, b) => a.col - b.col).map(s => dia ? seatButtonReadOnly(s, occupiedIds) : seatButton(current.horarioKey, s)).join('')}
             </div>`).join('')}
           </div>
         </div>
@@ -494,7 +567,13 @@
             <span><i class="van-dot free"></i>Libre</span>
             <span><i class="van-dot occupied"></i>Ocupado</span>
           </div>
-          <p class="text-muted" style="font-size:13px;margin:0">${libres} de ${current.seats.length} libres para "${esc(current.horarioLabel)}".</p>
+          <p class="text-muted" style="font-size:13px;margin:0">${libres} de ${current.seats.length} libres para "${esc(current.horarioLabel)}"${dia ? ' el ' + esc(DIA_LABELS[dia]) : ''}.</p>
+          ${dia ? `
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+            ${occupants.length
+              ? occupants.map(o => `<div style="font-size:13px"><strong>${esc(o.nombre)}</strong> — asiento ${esc(o.seats.join(', '))}</div>`).join('')
+              : '<p class="text-muted" style="font-size:13px;margin:0">Nadie tiene asiento asignado este día en este horario.</p>'}
+          </div>` : ''}
         </div>
       </div>
     </div>`;
@@ -873,12 +952,27 @@
     if (jobs.length) await Promise.all(jobs);
   }
 
+  function shapeAsientosPayload(f) {
+    const shapeLeg = (leg) => {
+      const a = f.asientos[leg];
+      const exceptions = {};
+      Object.keys(a.exceptions).forEach((dia) => {
+        const ex = a.exceptions[dia];
+        exceptions[dia] = { horarioKey: ex.horarioKey, seats: ex.seats.slice() };
+      });
+      return { horarioKey: a.horarioKey, seats: a.seats.slice(), exceptions };
+    };
+    return { ida: shapeLeg('ida'), vuelta: shapeLeg('vuelta') };
+  }
+
   async function handleNewContact() {
     state.formError = '';
     const f = state.form;
     if (!f.nombre || !f.nombre.trim()) { state.formError = 'El nombre es obligatorio.'; render(); return; }
-    const payload = Object.assign({}, f, { nombre: f.nombre.trim(), barrio: (f.barrio || '').trim(), tramos: Number(f.tramos) || 0, monto: Number(f.monto) || 0 });
-    delete payload.asientos;
+    const payload = Object.assign({}, f, {
+      nombre: f.nombre.trim(), barrio: (f.barrio || '').trim(), tramos: Number(f.tramos) || 0, monto: Number(f.monto) || 0,
+      asientos: shapeAsientosPayload(f)
+    });
     try {
       const data = await api('/contacts', { method: 'POST', body: JSON.stringify(payload) });
       await applyAsientoSelections(f);
@@ -1120,6 +1214,7 @@
       case 'zero-tramos-remove': confirmZeroTramosRemove(); break;
       case 'restore-tramos': setActivoTramos(btn.dataset.id, true); break;
       case 'set-seatmap': state.seatMapView = btn.dataset.key; render(); break;
+      case 'set-seat-dia': state.seatMapDia = btn.dataset.dia; render(); break;
       case 'toggle-seat': toggleSeat(btn.dataset.key, btn.dataset.seat, btn.dataset.occupied === '1'); break;
       case 'pick-horario': handlePickHorario(btn.dataset.scope, btn.dataset.key); break;
       case 'pick-seat': handlePickSeat(btn.dataset.scope, btn.dataset.seat); break;

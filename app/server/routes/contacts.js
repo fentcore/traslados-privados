@@ -24,6 +24,39 @@ function sanitizeHorarios(input, dias) {
   return out;
 }
 
+// A seat assignment picked in the "Nuevo cliente" form: which real horario
+// (horario_key from seat_maps) and which seat number(s), plus optional
+// per-day overrides for clients who ride a different horario/seat on a
+// specific day. Used to compute day-accurate occupancy in the admin's
+// Asientos tab — kept separate from the shared seat_maps.occupied flag,
+// which stays a simple horario-wide on/off switch for the public site.
+function sanitizeAsientoLeg(input) {
+  const out = { horarioKey: '', seats: [], exceptions: {} };
+  if (!input || typeof input !== 'object') return out;
+  out.horarioKey = String(input.horarioKey || '').trim().slice(0, 60);
+  out.seats = Array.isArray(input.seats)
+    ? Array.from(new Set(input.seats.map(s => String(s).trim().slice(0, 10)).filter(Boolean))).slice(0, 20)
+    : [];
+  if (input.exceptions && typeof input.exceptions === 'object') {
+    for (const dia of Object.keys(input.exceptions)) {
+      if (!DIAS_VALID.has(dia)) continue;
+      const ex = input.exceptions[dia] || {};
+      const horarioKey = String(ex.horarioKey || '').trim().slice(0, 60);
+      const seats = Array.isArray(ex.seats)
+        ? Array.from(new Set(ex.seats.map(s => String(s).trim().slice(0, 10)).filter(Boolean))).slice(0, 20)
+        : [];
+      if (horarioKey && seats.length) out.exceptions[dia] = { horarioKey, seats };
+    }
+  }
+  return out;
+}
+function sanitizeAsientos(input) {
+  return {
+    ida: sanitizeAsientoLeg(input && input.ida),
+    vuelta: sanitizeAsientoLeg(input && input.vuelta)
+  };
+}
+
 function serialize(row) {
   return {
     id: row.id,
@@ -38,6 +71,7 @@ function serialize(row) {
     tipoViaje: row.tipo_viaje || 'ambos',
     dias: Array.isArray(row.dias) ? row.dias : [],
     horarios: (row.horarios && typeof row.horarios === 'object') ? row.horarios : {},
+    asientos: (row.asientos && typeof row.asientos === 'object') ? row.asientos : {},
     activoTramos: row.activo_tramos !== false,
     createdBy: row.created_by,
     updatedAt: row.updated_at
@@ -57,7 +91,8 @@ function sanitizeInput(body) {
     fecha: body.fecha ? String(body.fecha).slice(0, 10) : null,
     tipoViaje: TIPO_VALID.has(body.tipoViaje) ? body.tipoViaje : 'ambos',
     dias,
-    horarios: sanitizeHorarios(body.horarios, dias)
+    horarios: sanitizeHorarios(body.horarios, dias),
+    asientos: sanitizeAsientos(body.asientos)
   };
 }
 
@@ -89,9 +124,9 @@ router.post('/', async (req, res) => {
   if (!data.nombre) return res.status(400).json({ error: 'El nombre es obligatorio.' });
   try {
     const { rows } = await pool.query(
-      `INSERT INTO contacts (workspace_id, nombre, barrio, tramos, mail, telefono, monto, estado, fecha, tipo_viaje, dias, horarios, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
-      [req.workspaceId, data.nombre, data.barrio, data.tramos, data.mail, data.telefono, data.monto, data.estado, data.fecha, data.tipoViaje, JSON.stringify(data.dias), JSON.stringify(data.horarios), req.userId]
+      `INSERT INTO contacts (workspace_id, nombre, barrio, tramos, mail, telefono, monto, estado, fecha, tipo_viaje, dias, horarios, asientos, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
+      [req.workspaceId, data.nombre, data.barrio, data.tramos, data.mail, data.telefono, data.monto, data.estado, data.fecha, data.tipoViaje, JSON.stringify(data.dias), JSON.stringify(data.horarios), JSON.stringify(data.asientos), req.userId]
     );
     const contact = rows[0];
     res.status(201).json({ contact: serialize(contact) });
@@ -113,9 +148,9 @@ router.put('/:id', async (req, res) => {
   if (!data.nombre) return res.status(400).json({ error: 'El nombre es obligatorio.' });
   try {
     const { rows } = await pool.query(
-      `UPDATE contacts SET nombre=$1, barrio=$2, tramos=$3, mail=$4, telefono=$5, monto=$6, estado=$7, fecha=$8, tipo_viaje=$9, dias=$10, horarios=$11, updated_at=now()
-       WHERE id=$12 AND workspace_id=$13 RETURNING *`,
-      [data.nombre, data.barrio, data.tramos, data.mail, data.telefono, data.monto, data.estado, data.fecha, data.tipoViaje, JSON.stringify(data.dias), JSON.stringify(data.horarios), req.params.id, req.workspaceId]
+      `UPDATE contacts SET nombre=$1, barrio=$2, tramos=$3, mail=$4, telefono=$5, monto=$6, estado=$7, fecha=$8, tipo_viaje=$9, dias=$10, horarios=$11, asientos=$12, updated_at=now()
+       WHERE id=$13 AND workspace_id=$14 RETURNING *`,
+      [data.nombre, data.barrio, data.tramos, data.mail, data.telefono, data.monto, data.estado, data.fecha, data.tipoViaje, JSON.stringify(data.dias), JSON.stringify(data.horarios), JSON.stringify(data.asientos), req.params.id, req.workspaceId]
     );
     if (!rows.length) return res.status(404).json({ error: 'Contacto no encontrado.' });
     res.json({ contact: serialize(rows[0]) });
