@@ -39,6 +39,8 @@
     deletingContact: null,
     viewingContact: null,
     confirmZeroTramos: null,
+    seatMaps: [],
+    seatMapView: '',
     accountOpen: false,
     deferredInstallPrompt: null,
     pushState: 'unknown', // unknown | unsupported | default | denied | subscribed
@@ -168,6 +170,7 @@
       ${renderTabs()}
       ${state.view === 'form' ? renderFormView() : ''}
       ${state.view === 'tramos' ? renderTramosView() : ''}
+      ${state.view === 'asientos' ? renderAsientosView() : ''}
       ${state.view === 'list' ? renderListView() : ''}
     </div>
     ${state.editingContact ? renderEditDialog() : ''}
@@ -207,6 +210,7 @@
     <div class="tab-bar">
       <button type="button" data-action="set-view" data-view="form" class="${v === 'form' ? 'active' : ''}">Nuevo cliente</button>
       <button type="button" data-action="set-view" data-view="tramos" class="${v === 'tramos' ? 'active' : ''}">Tramos</button>
+      <button type="button" data-action="set-view" data-view="asientos" class="${v === 'asientos' ? 'active' : ''}">Asientos</button>
       <button type="button" data-action="set-view" data-view="list" class="${v === 'list' ? 'active' : ''}">Contactos (${state.contacts.length})</button>
     </div>`;
   }
@@ -313,6 +317,53 @@
         </div>`).join('')}
       </div>
       ${rows.length === 0 ? `<div class="empty-note">${state.contacts.length === 0 ? 'Todavía no cargaste clientes.' : 'No hay contactos que coincidan con el filtro.'}</div>` : ''}
+    </div>`;
+  }
+
+  const SEAT_COL_MAP = { 1: 1, 2: 2, 3: 4, 4: 5 };
+
+  function seatButton(horarioKey, s) {
+    const cls = ['seat'];
+    if (s.occupied) cls.push('occupied');
+    const style = s.row <= 3 ? `grid-column:${SEAT_COL_MAP[s.col]};grid-row:${s.row}` : '';
+    return `<button type="button" class="${cls.join(' ')}" style="${style}" data-action="toggle-seat" data-key="${esc(horarioKey)}" data-seat="${esc(s.id)}" data-occupied="${s.occupied ? '1' : ''}">${esc(s.id)}</button>`;
+  }
+
+  function renderAsientosView() {
+    const maps = state.seatMaps;
+    if (!maps.length) {
+      return '<div class="view-pad"><div class="empty-note">Cargando asientos…</div></div>';
+    }
+    const current = maps.find(m => m.horarioKey === state.seatMapView) || maps[0];
+    const front = current.seats.filter(s => s.row <= 3);
+    const back = current.seats.filter(s => s.row > 3).slice().sort((a, b) => a.col - b.col);
+    const libres = current.seats.filter(s => !s.occupied).length;
+    return `
+    <div class="view-pad">
+      <div>
+        <div style="font-family:var(--font-heading);font-weight:600;font-size:20px">Asientos</div>
+        <div class="text-muted" style="font-size:12.5px">Tocá un asiento para marcarlo ocupado o libre. Se actualiza al instante en la página pública.</div>
+      </div>
+      <div class="van-tabs">
+        ${maps.map(m => `<button type="button" data-action="set-seatmap" data-key="${esc(m.horarioKey)}" class="${m.horarioKey === current.horarioKey ? 'active' : ''}">${esc(m.horarioLabel)}</button>`).join('')}
+      </div>
+      <div class="van-wrap">
+        <div class="van-plan blueprint">
+          ${corners()}
+          <div class="van-cab">Conductor</div>
+          <div class="van-seats">
+            ${front.map(s => seatButton(current.horarioKey, s)).join('')}
+            <div class="van-seat-row-back">${back.map(s => seatButton(current.horarioKey, s)).join('')}</div>
+          </div>
+        </div>
+        <div class="van-side">
+          <div class="van-legend">
+            <span><i class="van-dot free"></i>Libre</span>
+            <span><i class="van-dot occupied"></i>Ocupado</span>
+          </div>
+          <p class="text-muted" style="font-size:13px;margin:0">${libres} de ${current.seats.length} libres para "${esc(current.horarioLabel)}".</p>
+        </div>
+      </div>
     </div>`;
   }
 
@@ -609,6 +660,7 @@
     state.workspace = data.workspace;
     state.screen = 'app';
     loadContacts();
+    loadSeatMaps();
     setupPolling();
     checkPushState();
   }
@@ -724,6 +776,26 @@
       state.formError = err.message;
       render();
     }
+  }
+
+  async function loadSeatMaps() {
+    try {
+      const data = await api('/seats');
+      state.seatMaps = data.seatMaps;
+      if (!state.seatMapView && state.seatMaps.length) state.seatMapView = state.seatMaps[0].horarioKey;
+      render();
+    } catch (err) { console.error(err); }
+  }
+
+  async function toggleSeat(horarioKey, seatId, currentlyOccupied) {
+    try {
+      const data = await api('/seats/' + encodeURIComponent(horarioKey) + '/seat/' + encodeURIComponent(seatId), {
+        method: 'PATCH',
+        body: JSON.stringify({ occupied: !currentlyOccupied })
+      });
+      state.seatMaps = state.seatMaps.map(m => m.horarioKey === data.seatMap.horarioKey ? data.seatMap : m);
+      render();
+    } catch (err) { console.error(err); }
   }
 
   function setSort(key) {
@@ -851,6 +923,8 @@
       case 'zero-tramos-keep': confirmZeroTramosKeep(); break;
       case 'zero-tramos-remove': confirmZeroTramosRemove(); break;
       case 'restore-tramos': setActivoTramos(btn.dataset.id, true); break;
+      case 'set-seatmap': state.seatMapView = btn.dataset.key; render(); break;
+      case 'toggle-seat': toggleSeat(btn.dataset.key, btn.dataset.seat, btn.dataset.occupied === '1'); break;
       case 'sort': setSort(btn.dataset.key); break;
       case 'clear-date-filter': state.filterFrom = ''; state.filterTo = ''; render(); break;
       case 'clear-tramos-filter': state.tramosFilterDia = ''; state.tramosFilterHora = ''; render(); break;
@@ -905,7 +979,7 @@
 
     const params = new URLSearchParams(window.location.search);
     const v = params.get('view');
-    if (v === 'tramos' || v === 'list' || v === 'form') state.view = v;
+    if (v === 'tramos' || v === 'list' || v === 'form' || v === 'asientos') state.view = v;
 
     if (state.token) {
       try {
@@ -914,6 +988,7 @@
         state.workspace = data.workspace;
         state.screen = 'app';
         await loadContacts();
+        await loadSeatMaps();
         setupPolling();
         checkPushState();
       } catch (e) {

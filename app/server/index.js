@@ -7,6 +7,7 @@ const { initSchema } = require('./db');
 const authRoutes = require('./routes/auth');
 const contactsRoutes = require('./routes/contacts');
 const pushRoutes = require('./routes/push');
+const seatsRoutes = require('./routes/seats');
 
 const app = express();
 app.use(cors());
@@ -15,6 +16,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/contacts', contactsRoutes);
 app.use('/api/push', pushRoutes);
+app.use('/api/seats', seatsRoutes);
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

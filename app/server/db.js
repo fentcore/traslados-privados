@@ -73,13 +73,56 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- One shared seat map per departure (the site has a single van), editable from
+-- the admin panel and read publicly by the landing page's booking widget.
+CREATE TABLE IF NOT EXISTS seat_maps (
+  id SERIAL PRIMARY KEY,
+  horario_key TEXT UNIQUE NOT NULL,
+  horario_label TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  seats JSONB NOT NULL DEFAULT '[]'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS idx_contacts_workspace ON contacts(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_users_workspace ON users(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_push_subs_user ON push_subscriptions(user_id);
 `;
 
+// Renault Master layout: 3 rows of 4 seats (2 + aisle + 2) behind the driver,
+// plus a 3-seat back bench. 15 passenger seats total.
+function defaultSeats() {
+  const seats = [];
+  let n = 1;
+  for (let row = 1; row <= 3; row++) {
+    for (let col = 1; col <= 4; col++) {
+      seats.push({ id: String(n), row, col, occupied: false });
+      n++;
+    }
+  }
+  for (let col = 1; col <= 3; col++) {
+    seats.push({ id: String(n), row: 4, col, occupied: false });
+    n++;
+  }
+  return seats;
+}
+
+const SEAT_MAP_DEFAULTS = [
+  { key: 'ingreso_730', label: 'Ingreso 7:30', order: 1 },
+  { key: 'ingreso_820', label: 'Ingreso 8:20', order: 2 },
+  { key: 'salida_mediodia', label: 'Salida mediodía (13:00)', order: 3 },
+  { key: 'salida_tarde', label: 'Salida tarde (17:10)', order: 4 }
+];
+
 async function initSchema() {
   await pool.query(SCHEMA);
+  for (const sm of SEAT_MAP_DEFAULTS) {
+    await pool.query(
+      `INSERT INTO seat_maps (horario_key, horario_label, sort_order, seats) VALUES ($1,$2,$3,$4)
+       ON CONFLICT (horario_key) DO NOTHING`,
+      [sm.key, sm.label, sm.order, JSON.stringify(defaultSeats())]
+    );
+  }
 }
 
 module.exports = { pool, initSchema };

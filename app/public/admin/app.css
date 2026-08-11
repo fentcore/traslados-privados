@@ -95,3 +95,36 @@ body { background: var(--color-neutral-300); }
 .notif-banner button { flex: none; }
 
 .sync-status { font-size: 11px; color: color-mix(in srgb, var(--color-text) 50%, transparent); }
+
+.van-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.van-tabs button {
+  border: 1px solid var(--color-divider); background: var(--color-bg); color: var(--color-text);
+  font-family: var(--font-heading); font-weight: 600; font-size: 13px;
+  padding: 7px 12px; cursor: pointer;
+}
+.van-tabs button.active { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-bg); }
+.van-wrap { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; margin-top: 14px; }
+.van-plan { flex: 0 0 auto; width: min(260px, 100%); padding: 18px 14px 20px; }
+.van-cab {
+  border-bottom: 1px solid var(--color-divider); margin: 0 0 16px; padding-bottom: 10px; text-align: center;
+  font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.van-seats { display: grid; grid-template-columns: 1fr 1fr 14px 1fr 1fr; gap: 8px; }
+.van-seat-row-back {
+  grid-column: 1 / -1; display: flex; justify-content: center; gap: 8px;
+  margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--color-divider);
+}
+.van-seat-row-back .seat { width: 44px; flex: none; }
+.van-seats .seat { width: 100%; aspect-ratio: 1; }
+.seat {
+  border: 1px solid var(--color-divider); background: var(--color-accent-100); color: var(--color-accent-800);
+  font-family: var(--font-heading); font-weight: 600; font-size: 12px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+}
+.seat.occupied { background: var(--color-neutral-300); color: var(--color-neutral-700); border-style: dashed; }
+.van-side { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 10px; }
+.van-legend { display: flex; gap: 14px; font-size: 12px; }
+.van-dot { width: 9px; height: 9px; display: inline-block; margin-right: 5px; vertical-align: middle; }
+.van-dot.free { background: var(--color-accent-100); border: 1px solid var(--color-divider); }
+.van-dot.occupied { background: var(--color-neutral-300); border: 1px solid var(--color-divider); }

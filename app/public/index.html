@@ -97,6 +97,46 @@
   @media (max-width: 720px) {
     .grid-2, .grid-3 { grid-template-columns: 1fr; }
   }
+
+  /* — reservation seat map — */
+  .van-card { padding: clamp(20px, 3vw, 32px); gap: var(--space-4); }
+  .van-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+  .van-tabs button {
+    border: 1px solid var(--color-divider); background: var(--color-bg); color: var(--color-text);
+    font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 13.5px;
+    padding: 8px 14px; border-radius: var(--radius-md); cursor: pointer;
+  }
+  .van-tabs button.active { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
+  .van-wrap { display: flex; gap: clamp(20px, 4vw, 40px); flex-wrap: wrap; align-items: flex-start; }
+  .van-plan {
+    flex: 0 0 auto; width: min(270px, 100%); border: 2px solid var(--color-text);
+    border-radius: 34px 34px 12px 12px; padding: 18px 16px 22px; background: var(--color-bg);
+  }
+  .van-cab {
+    border-bottom: 2px solid var(--color-text); margin: -18px -16px 18px; padding: 10px 16px 12px;
+    text-align: center; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-text) 60%, transparent); border-radius: 32px 32px 0 0;
+  }
+  .van-seats { display: grid; grid-template-columns: 1fr 1fr 14px 1fr 1fr; gap: 10px; }
+  .van-seat-row-back {
+    grid-column: 1 / -1; display: flex; justify-content: center; gap: 10px;
+    margin-top: 6px; padding-top: 12px; border-top: 1px dashed var(--color-divider);
+  }
+  .van-seat-row-back .seat { width: 52px; flex: none; }
+  .seat {
+    width: 100%; aspect-ratio: 1; border-radius: 8px 8px 3px 3px; border: 1px solid var(--color-divider);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 13px;
+    cursor: pointer; background: var(--color-accent-100); color: var(--color-accent-700); padding: 0;
+  }
+  .seat.selected { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
+  .seat.occupied { background: color-mix(in srgb, var(--color-text) 12%, var(--color-bg)); color: color-mix(in srgb, var(--color-text) 40%, transparent); cursor: not-allowed; border-style: dashed; }
+  .van-side { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 14px; }
+  .van-legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; }
+  .van-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 6px; vertical-align: middle; }
+  .van-dot.free { background: var(--color-accent-100); border: 1px solid var(--color-divider); }
+  .van-dot.selected { background: var(--color-accent); }
+  .van-dot.occupied { background: color-mix(in srgb, var(--color-text) 12%, var(--color-bg)); border: 1px solid var(--color-divider); }
 </style>
 </head>
 <body>
@@ -108,7 +148,7 @@
     <a href="#precios">Precios</a>
     <a href="#faq">Preguntas</a>
     <a href="/admin/" class="btn btn-secondary">Admin</a>
-    <a href="https://wa.me/5491180371010" target="_blank" rel="noopener" class="btn btn-primary">Reservar</a>
+    <a href="#reserva" class="btn btn-primary">Reservar</a>
   </div>
 </nav>
 
@@ -123,7 +163,7 @@
       Van compartida puerta a puerta sobre Ruta 26, con horarios fijos de lunes a viernes. Reservás tu lugar por WhatsApp y viajás sin filas ni imprevistos.
     </p>
     <div style="display: flex; gap: var(--space-3); flex-wrap: wrap; margin-top: 28px;">
-      <a href="https://wa.me/5491180371010" target="_blank" rel="noopener" class="btn btn-primary">Reservar por WhatsApp</a>
+      <a href="#reserva" class="btn btn-primary">Reservar mi lugar</a>
       <a href="#horarios" class="btn btn-ghost">Ver horarios</a>
     </div>
   </section>
@@ -204,20 +244,24 @@
 
   <hr style="height: 0; border: 0; border-top: 1px solid var(--color-divider); margin: 0 0 40px;">
 
-  <section id="servicio" style="margin: 0 0 40px;">
-    <span class="eyebrow">Por qué viajar con nosotros</span>
-    <div class="grid-3">
-      <div class="card elev-sm">
-        <div class="card-title" style="font-size: 19px;">Puntualidad</div>
-        <p class="card-body">Salidas fijas todos los días. Si el horario dice 7:30, la van sale a las 7:30.</p>
-      </div>
-      <div class="card elev-sm">
-        <div class="card-title" style="font-size: 19px;">Puerta a puerta</div>
-        <p class="card-body">Paradas fijas sobre Ruta 26, cerca de tu punto de partida y de llegada.</p>
-      </div>
-      <div class="card elev-sm">
-        <div class="card-title" style="font-size: 19px;">Reserva directa</div>
-        <p class="card-body">Reservás por WhatsApp: enviás el comprobante y listo, sin intermediarios.</p>
+  <section id="reserva" style="margin: 0 0 40px;">
+    <span class="eyebrow">Reservá tu lugar</span>
+    <div class="card elev-md van-card">
+      <div class="van-tabs" id="van-tabs"></div>
+      <div class="van-wrap">
+        <div class="van-plan">
+          <div class="van-cab">Conductor</div>
+          <div class="van-seats" id="van-seats"></div>
+        </div>
+        <div class="van-side">
+          <div class="van-legend">
+            <span><i class="van-dot free"></i>Libre</span>
+            <span><i class="van-dot selected"></i>Seleccionado</span>
+            <span><i class="van-dot occupied"></i>Ocupado</span>
+          </div>
+          <p id="van-status" class="text-muted" style="font-size: 13.5px; margin: 0;">Elegí tu horario y tocá los asientos libres que quieras reservar.</p>
+          <a id="van-reservar" href="#" target="_blank" rel="noopener" class="btn btn-primary" style="pointer-events: none; opacity: .5;">Reservar por WhatsApp</a>
+        </div>
       </div>
     </div>
   </section>
@@ -243,7 +287,7 @@
 
   <section style="margin: 0 0 64px;">
     <div class="card elev-md" style="align-items: flex-start; padding: clamp(24px, 4vw, 40px);">
-      <h3 style="font-size: 26px; letter-spacing: -0.015em;">Reservá tu viaje ahora</h3>
+      <h3 style="font-size: 26px; letter-spacing: -0.015em;">¿Preferís coordinarlo directo?</h3>
       <p style="font-size: 15.5px; line-height: 26px; margin: 0; max-width: 58ch; color: color-mix(in srgb, var(--color-text) 78%, transparent);">Escribinos por WhatsApp con el día y horario — te confirmamos tu lugar al instante.</p>
       <a href="https://wa.me/5491180371010" target="_blank" rel="noopener" class="btn btn-primary" style="margin-top: 8px;">WhatsApp +5491180371010</a>
     </div>
@@ -255,6 +299,111 @@
   </footer>
 
 </div>
+
+<script>
+(function () {
+  var WHATSAPP_NUMBER = '5491180371010';
+  var COL_MAP = { 1: 1, 2: 2, 3: 4, 4: 5 };
+  var seatMaps = [];
+  var currentKey = '';
+  var selected = new Set();
+
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function currentMap() {
+    return seatMaps.find(function (m) { return m.horarioKey === currentKey; });
+  }
+
+  function renderTabs() {
+    var el = document.getElementById('van-tabs');
+    el.innerHTML = seatMaps.map(function (m) {
+      return '<button type="button" data-key="' + esc(m.horarioKey) + '" class="' + (m.horarioKey === currentKey ? 'active' : '') + '">' + esc(m.horarioLabel) + '</button>';
+    }).join('');
+  }
+
+  function seatButton(s, style) {
+    var isSelected = selected.has(s.id);
+    var cls = ['seat'];
+    if (isSelected) cls.push('selected');
+    else if (s.occupied) cls.push('occupied');
+    var disabled = (s.occupied && !isSelected) ? 'disabled' : '';
+    return '<button type="button" class="' + cls.join(' ') + '" style="' + style + '" data-seat="' + esc(s.id) + '" ' + disabled + '>' + esc(s.id) + '</button>';
+  }
+
+  function renderSeats() {
+    var map = currentMap();
+    var el = document.getElementById('van-seats');
+    if (!map) { el.innerHTML = ''; return; }
+    var front = map.seats.filter(function (s) { return s.row <= 3; });
+    var back = map.seats.filter(function (s) { return s.row > 3; }).sort(function (a, b) { return a.col - b.col; });
+    var frontHtml = front.map(function (s) {
+      return seatButton(s, 'grid-column:' + COL_MAP[s.col] + ';grid-row:' + s.row + ';');
+    }).join('');
+    var backHtml = '<div class="van-seat-row-back">' + back.map(function (s) { return seatButton(s, ''); }).join('') + '</div>';
+    el.innerHTML = frontHtml + backHtml;
+    updateStatus();
+  }
+
+  function updateStatus() {
+    var map = currentMap();
+    var statusEl = document.getElementById('van-status');
+    var linkEl = document.getElementById('van-reservar');
+    if (!map) return;
+    var libres = map.seats.filter(function (s) { return !s.occupied; }).length;
+    if (selected.size === 0) {
+      statusEl.textContent = libres + ' de ' + map.seats.length + ' asientos libres para ' + map.horarioLabel + '. Tocá los que quieras reservar.';
+      linkEl.style.pointerEvents = 'none';
+      linkEl.style.opacity = '.5';
+    } else {
+      var seatList = Array.from(selected).sort(function (a, b) { return Number(a) - Number(b); }).join(', ');
+      statusEl.textContent = 'Asiento(s) elegido(s): ' + seatList + ' — ' + map.horarioLabel + '.';
+      linkEl.style.pointerEvents = 'auto';
+      linkEl.style.opacity = '1';
+      var msg = 'Hola! Quiero reservar el viaje "' + map.horarioLabel + '", asiento(s) ' + seatList + '.';
+      linkEl.href = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(msg);
+    }
+  }
+
+  function selectHorario(key) {
+    currentKey = key;
+    selected = new Set();
+    renderTabs();
+    renderSeats();
+  }
+
+  document.getElementById('van-tabs').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-key]');
+    if (!btn) return;
+    selectHorario(btn.dataset.key);
+  });
+
+  document.getElementById('van-seats').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-seat]');
+    if (!btn || btn.disabled) return;
+    var id = btn.dataset.seat;
+    if (selected.has(id)) selected.delete(id); else selected.add(id);
+    renderSeats();
+  });
+
+  fetch('/api/seats/public')
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      seatMaps = (data && data.seatMaps) || [];
+      if (!seatMaps.length) {
+        document.getElementById('van-status').textContent = 'No hay horarios configurados todavía.';
+        return;
+      }
+      selectHorario(seatMaps[0].horarioKey);
+    })
+    .catch(function () {
+      document.getElementById('van-status').textContent = 'No se pudo cargar la disponibilidad. Escribinos directo por WhatsApp.';
+    });
+})();
+</script>
 
 </body>
 </html>
