@@ -100,6 +100,14 @@
 
   /* — reservation seat map — */
   .van-card { padding: clamp(20px, 3vw, 32px); gap: var(--space-4); }
+  .van-fields { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+  .van-field { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 6px; }
+  .van-field label { font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 60%, transparent); }
+  .van-field input, .van-field select {
+    font: inherit; font-size: 14px; color: var(--color-text); background: var(--color-surface);
+    border: 1px solid var(--color-divider); border-radius: var(--radius-md); padding: 9px 12px;
+  }
+  .van-field input:focus-visible, .van-field select:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
   .van-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
   .van-tabs button {
     border: 1px solid var(--color-divider); background: var(--color-bg); color: var(--color-text);
@@ -249,6 +257,26 @@
   <section id="reserva" style="margin: 0 0 40px;">
     <span class="eyebrow">Reservá tu lugar</span>
     <div class="card elev-md van-card">
+      <div class="van-fields">
+        <div class="van-field">
+          <label for="van-nombre">Nombre del pasajero</label>
+          <input type="text" id="van-nombre" placeholder="Nombre y apellido" autocomplete="name" />
+        </div>
+        <div class="van-field">
+          <label for="van-barrio">Barrio</label>
+          <select id="van-barrio">
+            <option value="">Elegí tu barrio</option>
+            <option>Riberas</option>
+            <option>Ceibos</option>
+            <option>Nativas</option>
+            <option>Muelles</option>
+            <option>Acacias</option>
+            <option>Araucarias</option>
+            <option>Vistas</option>
+            <option>Costas</option>
+          </select>
+        </div>
+      </div>
       <div class="van-tabs" id="van-tabs"></div>
       <div class="van-wrap">
         <div class="van-plan">
@@ -349,24 +377,48 @@
     updateStatus();
   }
 
+  function getNombre() {
+    var el = document.getElementById('van-nombre');
+    return el ? el.value.trim() : '';
+  }
+  function getBarrio() {
+    var el = document.getElementById('van-barrio');
+    return el ? el.value : '';
+  }
+  function seatListText() {
+    return Array.from(selected).sort(function (a, b) { return Number(a) - Number(b); }).join(', ');
+  }
+  function disableLink() {
+    var linkEl = document.getElementById('van-reservar');
+    linkEl.style.pointerEvents = 'none';
+    linkEl.style.opacity = '.5';
+  }
+
   function updateStatus() {
     var map = currentMap();
     var statusEl = document.getElementById('van-status');
     var linkEl = document.getElementById('van-reservar');
     if (!map) return;
     var libres = map.seats.filter(function (s) { return !s.occupied; }).length;
+    var nombre = getNombre();
+    var barrio = getBarrio();
+
     if (selected.size === 0) {
       statusEl.textContent = libres + ' de ' + map.seats.length + ' asientos libres para ' + map.horarioLabel + '. Tocá los que quieras reservar.';
-      linkEl.style.pointerEvents = 'none';
-      linkEl.style.opacity = '.5';
-    } else {
-      var seatList = Array.from(selected).sort(function (a, b) { return Number(a) - Number(b); }).join(', ');
-      statusEl.textContent = 'Asiento(s) elegido(s): ' + seatList + ' — ' + map.horarioLabel + '.';
-      linkEl.style.pointerEvents = 'auto';
-      linkEl.style.opacity = '1';
-      var msg = 'Hola! Quiero reservar el viaje "' + map.horarioLabel + '", asiento(s) ' + seatList + '.';
-      linkEl.href = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(msg);
+      disableLink();
+      return;
     }
+    var seatList = seatListText();
+    if (!nombre || !barrio) {
+      statusEl.textContent = 'Asiento(s) ' + seatList + ' — completá tu nombre y tu barrio para reservar.';
+      disableLink();
+      return;
+    }
+    statusEl.textContent = nombre + ' (' + barrio + ') — asiento(s) ' + seatList + ' — ' + map.horarioLabel + '.';
+    linkEl.style.pointerEvents = 'auto';
+    linkEl.style.opacity = '1';
+    var msg = 'Hola! Soy ' + nombre + ', del barrio ' + barrio + '. Quiero reservar el viaje "' + map.horarioLabel + '", asiento(s) ' + seatList + '.';
+    linkEl.href = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(msg);
   }
 
   function selectHorario(key) {
@@ -389,6 +441,9 @@
     if (selected.has(id)) selected.delete(id); else selected.add(id);
     renderSeats();
   });
+
+  document.getElementById('van-nombre').addEventListener('input', updateStatus);
+  document.getElementById('van-barrio').addEventListener('change', updateStatus);
 
   fetch('/api/seats/public')
     .then(function (r) { return r.json(); })
