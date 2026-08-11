@@ -109,7 +109,11 @@
     background: color-mix(in srgb, var(--color-bg) 92%, transparent);
     position: sticky; top: 0; z-index: 20; backdrop-filter: blur(8px);
   }
-  .nav-brand { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 19px; margin-right: auto; }
+  .nav-brand {
+    font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 23px;
+    letter-spacing: 0.03em; margin-right: auto; display: flex; align-items: center; gap: 10px;
+  }
+  .brand-icon { flex: none; color: var(--color-accent); }
   .nav-links { display: flex; align-items: center; gap: var(--space-4); }
   .nav-links a:not(.btn) { color: var(--color-text-muted); font-size: 14px; font-weight: 500; }
   .nav-links a:not(.btn):hover { color: var(--color-text); }
@@ -313,7 +317,17 @@
 <body>
 
 <nav class="nav" style="padding-inline: max(clamp(20px,5vw,72px), calc((100% - 1200px) / 2 + clamp(20px,5vw,72px)));">
-  <span class="nav-brand">Andres Transport</span>
+  <span class="nav-brand">
+    ANDRES TRANSPORT
+    <svg class="brand-icon" width="30" height="16" viewBox="0 0 120 64" aria-hidden="true" focusable="false">
+      <path fill="currentColor" d="M8,48 L8,18 Q8,12 14,12 L84,12 Q100,12 104,26 L104,40 Q104,48 96,48 Z"/>
+      <rect x="18" y="18" width="64" height="14" rx="3" fill="var(--color-bg)"/>
+      <circle cx="30" cy="48" r="10" fill="currentColor"/>
+      <circle cx="88" cy="48" r="10" fill="currentColor"/>
+      <circle cx="30" cy="48" r="3.5" fill="var(--color-bg)"/>
+      <circle cx="88" cy="48" r="3.5" fill="var(--color-bg)"/>
+    </svg>
+  </span>
   <div class="nav-links">
     <a href="#horarios">Horarios</a>
     <a href="#precios">Precios</a>
