@@ -48,6 +48,7 @@
     seatMapView: '',
     seatMapDia: '', // '' = ocupacion general (todos los dias); 'lun'..'vie' = ver ese dia puntual
     accountOpen: false,
+    accentColor: '', // '' = default palette; else a per-user hex override, saved to this device only
     deferredInstallPrompt: null,
     pushState: 'unknown', // unknown | unsupported | default | denied | subscribed
     syncStatus: ''
@@ -827,6 +828,14 @@
           </div>
           <div class="text-muted" style="font-size:11.5px;margin-top:6px">Quien ingrese este código en "Unirme con código" va a ver y editar los mismos contactos, y vos vas a recibir una notificación cuando cargue uno nuevo.</div>
         </div>
+        <div class="field">
+          <label>Color del panel</label>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="color" id="accent-color-input" data-action="set-accent-color" value="${esc(state.accentColor || '#7dd3fc')}" style="width:44px;height:38px;padding:2px;border-radius:var(--radius-sm);border:1px solid var(--color-border);background:var(--color-surface-2);cursor:pointer" />
+            ${state.accentColor ? '<button type="button" data-action="reset-accent-color" class="btn btn-ghost" style="font-size:13px">Restablecer</button>' : ''}
+          </div>
+          <div class="text-muted" style="font-size:11.5px;margin-top:6px">Solo se aplica a tu usuario, en este dispositivo — a tu asistente no le cambia el color a menos que lo elija también.</div>
+        </div>
         <div class="dialog-actions">
           <button type="button" data-action="close-account" class="btn btn-secondary">Cerrar</button>
           <button type="button" data-action="logout" class="btn btn-primary">Cerrar sesión</button>
@@ -917,6 +926,7 @@
     state.user = data.user;
     state.workspace = data.workspace;
     state.screen = 'app';
+    loadUserAccent();
     loadContacts();
     loadSeatMaps();
     setupPolling();
@@ -932,6 +942,8 @@
     stopPolling();
     state.screen = 'auth';
     state.accountOpen = false;
+    clearAccentColor();
+    state.accentColor = '';
     render();
   }
 
@@ -945,6 +957,66 @@
     if (goingLight) htmlEl.setAttribute('data-theme', 'light');
     else htmlEl.removeAttribute('data-theme');
     try { localStorage.setItem('theme', goingLight ? 'light' : 'dark'); } catch (e) {}
+    if (state.accentColor) applyAccentColor(state.accentColor);
+    render();
+  }
+
+  // ---------- per-user accent color (device-local, not shared with the workspace) ----------
+  function hexToRgb(hex) {
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return m ? { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) } : null;
+  }
+  function rgbToHex(r, g, b) {
+    const clamp = (v) => Math.max(0, Math.min(255, Math.round(v)));
+    return '#' + [r, g, b].map((v) => clamp(v).toString(16).padStart(2, '0')).join('');
+  }
+  function mixHex(hex, towardHex, ratio) {
+    const a = hexToRgb(hex), b = hexToRgb(towardHex);
+    if (!a || !b) return hex;
+    return rgbToHex(a.r * ratio + b.r * (1 - ratio), a.g * ratio + b.g * (1 - ratio), a.b * ratio + b.b * (1 - ratio));
+  }
+  function accentInkFor(hex) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return '#062633';
+    const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+    return luminance > 0.6 ? '#12222a' : '#ffffff';
+  }
+  function applyAccentColor(hex) {
+    if (!hex || !/^#[0-9a-f]{6}$/i.test(hex)) return;
+    const root = document.documentElement;
+    const isLight = root.getAttribute('data-theme') === 'light';
+    root.style.setProperty('--color-accent', hex);
+    root.style.setProperty('--color-accent-strong', mixHex(hex, isLight ? '#000000' : '#ffffff', 0.8));
+    root.style.setProperty('--color-accent-ink', accentInkFor(hex));
+  }
+  function clearAccentColor() {
+    const root = document.documentElement;
+    root.style.removeProperty('--color-accent');
+    root.style.removeProperty('--color-accent-strong');
+    root.style.removeProperty('--color-accent-ink');
+  }
+  function accentStorageKey() {
+    return state.user ? 'traslados_accent_' + state.user.id : null;
+  }
+  function loadUserAccent() {
+    const key = accentStorageKey();
+    let hex = '';
+    if (key) { try { hex = localStorage.getItem(key) || ''; } catch (e) {} }
+    state.accentColor = hex;
+    if (hex) applyAccentColor(hex); else clearAccentColor();
+  }
+  function setAccentColor(hex) {
+    state.accentColor = hex;
+    applyAccentColor(hex);
+    const key = accentStorageKey();
+    if (key) { try { localStorage.setItem(key, hex); } catch (e) {} }
+    render();
+  }
+  function resetAccentColor() {
+    state.accentColor = '';
+    clearAccentColor();
+    const key = accentStorageKey();
+    if (key) { try { localStorage.removeItem(key); } catch (e) {} }
     render();
   }
 
@@ -1338,6 +1410,7 @@
       case 'install-app': installApp(); break;
       case 'enable-push': enablePush(); break;
       case 'toggle-theme': toggleTheme(); break;
+      case 'reset-accent-color': resetAccentColor(); break;
     }
   });
 
@@ -1350,6 +1423,8 @@
       else if (scope === 'filter' && field === 'tipo') state.filterTipo = value;
       else if (scope === 'tramosfiltro' && field === 'dia') { state.tramosFilterDia = value; state.tramosFilterHora = ''; }
       render();
+    } else if (t.matches('input[data-action="set-accent-color"]')) {
+      setAccentColor(t.value);
     }
   });
 
