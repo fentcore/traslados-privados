@@ -332,7 +332,7 @@
       <div class="dialog blueprint">
         ${corners()}
         <div class="dialog-title">${esc(c.nombre)} llegó a 0 tramos</div>
-        <div class="dialog-body">¿Querés sacar a ${esc(c.nombre)} de la pestaña Tramos? Va a seguir guardado en Contactos, con todos sus datos, y podés reactivarlo cuando quieras.</div>
+        <div class="dialog-body">¿Querés sacar a ${esc(c.nombre)} de la pestaña Tramos? Va a seguir guardado en Contactos, marcado como <strong>"A renovar"</strong>, y podés reactivarlo cuando quieras.</div>
         <div class="dialog-actions">
           <button type="button" data-action="keep-in-tramos" class="btn btn-secondary">Dejarlo en Tramos</button>
           <button type="button" data-action="remove-from-tramos" data-id="${c.id}" class="btn btn-primary">Sacar de Tramos</button>
@@ -753,7 +753,7 @@
 
   async function removeFromTramos(id) {
     try {
-      const data = await api('/contacts/' + id + '/en-tramos', { method: 'PATCH', body: JSON.stringify({ enTramos: false }) });
+      const data = await api('/contacts/' + id + '/en-tramos', { method: 'PATCH', body: JSON.stringify({ enTramos: false, estado: 'renovar' }) });
       state.contacts = state.contacts.map(c => c.id === data.contact.id ? data.contact : c);
       state.tramosZeroConfirm = null;
       render();
@@ -950,7 +950,7 @@
   async function init() {
     render();
     if ('serviceWorker' in navigator) {
-      try { await navigator.serviceWorker.register('/service-worker.js'); } catch (e) { console.error(e); }
+      try { await navigator.serviceWorker.register('/admin/service-worker.js'); } catch (e) { console.error(e); }
     }
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();

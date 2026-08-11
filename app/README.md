@@ -73,7 +73,9 @@ Las notificaciones push necesitan un par de claves propias del proyecto (no son 
 
 ## 3. Instalar la app en el celular (sin Play Store)
 
-1. Abrí la URL de la app en Chrome (Android) o Safari (iPhone).
+El panel de gestión vive en `/admin` (por ejemplo `https://traslados-privados.onrender.com/admin`). La raíz del sitio (`/`) es una página principal aparte, todavía muy simple, pensada para ir armando de cara al público más adelante.
+
+1. Abrí la URL de `/admin` en Chrome (Android) o Safari (iPhone).
 2. **Android/Chrome**: tocá el menú (⋮) → **"Instalar app"** o **"Agregar a pantalla de inicio"**. También puede aparecer un botón **"Instalar app"** dentro de la pestaña Contactos.
 3. **iPhone/Safari**: tocá el ícono de compartir (□↑) → **"Agregar a pantalla de inicio"**.
 4. Va a quedar como un ícono más, en pantalla completa, sin la barra del navegador — como una app nativa.
@@ -118,11 +120,13 @@ app/
     scripts/
       generate-vapid.js    genera las claves VAPID
   public/
-    index.html             shell de la PWA
-    app.js                 toda la lógica de la interfaz (sin frameworks)
-    styles.css             sistema de diseño Industry (tokens y componentes)
-    app.css                estilos propios de la app sobre esos tokens
-    manifest.json          manifiesto PWA (instalación, ícono, accesos directos)
-    service-worker.js      cache offline + recepción de notificaciones push
-    icons/
+    index.html             página principal (pública, simple, en construcción)
+    styles.css             sistema de diseño Industry (tokens y componentes) — compartido
+    icons/                 íconos de la PWA — compartidos
+    admin/                 panel de gestión (PWA), en /admin
+      index.html           shell de la PWA del panel
+      app.js                toda la lógica de la interfaz (sin frameworks)
+      app.css               estilos propios del panel sobre los tokens
+      manifest.json         manifiesto PWA del panel (scope /admin/)
+      service-worker.js     cache offline + recepción de notificaciones push (scope /admin/)
 ```

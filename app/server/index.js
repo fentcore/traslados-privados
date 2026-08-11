@@ -19,6 +19,13 @@ app.use('/api/push', pushRoutes);
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// The admin panel is a single-page app (client-side view state via ?view=),
+// so both /admin and any /admin/* path serve the same shell.
+app.get(['/admin', '/admin/*'], (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin', 'index.html'));
+});
+
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'No encontrado.' });
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));

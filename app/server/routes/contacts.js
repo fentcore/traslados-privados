@@ -105,7 +105,7 @@ router.post('/', async (req, res) => {
       title: 'Nuevo cliente cargado',
       body: contact.nombre,
       tag: 'nuevo-cliente',
-      url: '/?view=list'
+      url: '/admin/?view=list'
     }).catch(err => console.error('[push] fallo al notificar:', err.message));
   } catch (e) {
     console.error(e);
@@ -149,15 +149,19 @@ router.patch('/:id/tramos', async (req, res) => {
   }
 });
 
-// PATCH /:id/en-tramos { enTramos: true | false } - shows/hides a contact from
-// the "Tramos" tab without ever deleting it from Contactos.
+// PATCH /:id/en-tramos { enTramos: true | false, estado?: 'pendiente'|'pagado'|'renovar' }
+// Shows/hides a contact from the "Tramos" tab without ever deleting it from
+// Contactos. Passing estado lets the "sacar de Tramos" flow flag the contact
+// as "A renovar" in the same call.
 router.patch('/:id/en-tramos', async (req, res) => {
   const enTramos = req.body && req.body.enTramos === false ? false : true;
+  const estado = req.body && ESTADO_VALID.has(req.body.estado) ? req.body.estado : null;
   try {
     const { rows } = await pool.query(
-      `UPDATE contacts SET en_tramos = $1, updated_at = now()
-       WHERE id = $2 AND workspace_id = $3 RETURNING *`,
-      [enTramos, req.params.id, req.workspaceId]
+      estado
+        ? `UPDATE contacts SET en_tramos = $1, estado = $2, updated_at = now() WHERE id = $3 AND workspace_id = $4 RETURNING *`
+        : `UPDATE contacts SET en_tramos = $1, updated_at = now() WHERE id = $2 AND workspace_id = $3 RETURNING *`,
+      estado ? [enTramos, estado, req.params.id, req.workspaceId] : [enTramos, req.params.id, req.workspaceId]
     );
     if (!rows.length) return res.status(404).json({ error: 'Contacto no encontrado.' });
     res.json({ contact: serialize(rows[0]) });

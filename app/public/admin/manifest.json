@@ -1,8 +1,8 @@
 {
   "name": "Traslados Privados - Contactos",
   "short_name": "Traslados",
-  "start_url": "/?source=pwa",
-  "scope": "/",
+  "start_url": "/admin/?source=pwa",
+  "scope": "/admin/",
   "display": "standalone",
   "background_color": "#f2f2f3",
   "theme_color": "#5980a6",
@@ -16,7 +16,7 @@
       "name": "Tramos",
       "short_name": "Tramos",
       "description": "Ir directo a ajustar tramos por cliente",
-      "url": "/?view=tramos",
+      "url": "/admin/?view=tramos",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
