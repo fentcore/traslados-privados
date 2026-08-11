@@ -131,7 +131,18 @@
   details.card summary::after { content: '+'; float: right; font-family: var(--font-heading); color: var(--color-accent); }
   details.card[open] summary::after { content: '−'; }
 
-  .disclosure-lead { font-size: 16px; line-height: 1.7; color: var(--color-text-muted); margin: 0 0 20px; max-width: 60ch; }
+  .tab-bar { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--color-border); }
+  .tab-btn {
+    flex: 1; min-width: max-content; text-align: center; padding: 16px 18px; border: none; background: none;
+    font-family: var(--font-body); font-weight: 600; font-size: 15px; color: var(--color-text-muted);
+    cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: color .15s ease, border-color .15s ease;
+  }
+  .tab-btn:hover { color: var(--color-text); }
+  .tab-btn.active { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+  .tab-panel { padding: var(--space-4) clamp(20px, 3vw, 28px); }
+  .price-display { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 34px; color: var(--color-text); margin-bottom: 6px; }
+
   .disclosure summary {
     list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 10px;
     font-family: var(--font-body); font-weight: 700; font-size: 15.5px; color: var(--color-text);
@@ -169,8 +180,6 @@
   .section-title { font-size: clamp(24px, 3vw, 32px); margin: 0 0 24px; }
 
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(16px, 3vw, 24px); }
-  #horarios .grid-2 { align-items: start; }
-  #precios .grid-3 { align-items: start; }
   .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(16px, 3vw, 24px); }
   @media (max-width: 760px) {
     .grid-2, .grid-3 { grid-template-columns: 1fr; }
@@ -320,63 +329,57 @@
 
   <section id="horarios" style="margin: 0 0 var(--space-8);">
     <h2 class="section-title">Horarios de salida</h2>
-    <p class="disclosure-lead">Viajamos de lunes a viernes, a la mañana y a la tarde.</p>
-    <details class="disclosure" id="horarios-details">
-      <summary>Ver todos los horarios <span class="disclosure-arrow">▾</span></summary>
-      <div class="grid-2">
-        <div class="card elev-md" style="gap: var(--space-3);">
-          <div class="card-kicker">Ingreso</div>
-          <div class="card-title">Ingreso a Puertos</div>
-          <p class="card-body">Parada frente al Banco Macro, Ruta 26.</p>
-          <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
-            <div class="schedule-row"><span>Banco Macro, Ruta 26</span><span class="schedule-time">7:30</span></div>
-            <div class="schedule-row"><span>Banco Macro, Ruta 26</span><span class="schedule-time">8:20</span></div>
-          </div>
+    <div class="card elev-md" style="padding: 0;">
+      <div class="tab-bar" id="horarios-tabs">
+        <button type="button" class="tab-btn active" data-tab="ingreso">Ingreso a Puertos</button>
+        <button type="button" class="tab-btn" data-tab="salida">Salida de Puertos</button>
+      </div>
+      <div class="tab-panel" data-panel="ingreso">
+        <p class="card-body" style="margin: 0 0 12px;">Parada frente al Banco Macro, Ruta 26.</p>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <div class="schedule-row"><span>Banco Macro, Ruta 26</span><span class="schedule-time">7:30</span></div>
+          <div class="schedule-row"><span>Banco Macro, Ruta 26</span><span class="schedule-time">8:20</span></div>
         </div>
-        <div class="card elev-md" style="gap: var(--space-3);">
-          <div class="card-kicker">Salida</div>
-          <div class="card-title">Salida de Puertos</div>
-          <p class="card-body">Parada en la puerta de cada barrio.</p>
-          <div class="route-groups">
-            <div>
-              <div class="route-group-label">Mediodía</div>
-              <div class="route-list" id="salida-mediodia"></div>
-            </div>
-            <div>
-              <div class="route-group-label">Tarde</div>
-              <div class="route-list" id="salida-tarde"></div>
-            </div>
+      </div>
+      <div class="tab-panel" data-panel="salida" hidden>
+        <p class="card-body" style="margin: 0 0 12px;">Parada en la puerta de cada barrio.</p>
+        <div class="route-groups">
+          <div>
+            <div class="route-group-label">Mediodía</div>
+            <div class="route-list" id="salida-mediodia"></div>
+          </div>
+          <div>
+            <div class="route-group-label">Tarde</div>
+            <div class="route-list" id="salida-tarde"></div>
           </div>
         </div>
       </div>
-      <p style="font-size: 14.5px; line-height: 1.6; color: var(--color-text-muted); margin: 18px 0 0;">Fuera de estos horarios no realizamos viajes — el servicio no opera fines de semana ni feriados.</p>
-    </details>
+    </div>
+    <p style="font-size: 14.5px; line-height: 1.6; color: var(--color-text-muted); margin: 16px 0 0;">Fuera de estos horarios no realizamos viajes — el servicio no opera fines de semana ni feriados.</p>
   </section>
 
   <section id="precios" style="margin: 0 0 var(--space-8);">
     <h2 class="section-title">Precios</h2>
-    <p class="disclosure-lead">Desde $4.000 el tramo, con descuento si comprás varios juntos.</p>
-    <details class="disclosure" id="precios-details">
-      <summary>Ver precios y promociones <span class="disclosure-arrow">▾</span></summary>
-      <div class="grid-3">
-        <div class="card elev-md">
-          <div class="card-kicker">Individual</div>
-          <div class="card-title" style="font-size: 28px;">$4.000</div>
-          <p class="card-body">1 tramo — un solo recorrido, ida o vuelta.</p>
-        </div>
-        <div class="card elev-md">
-          <div class="card-kicker">Promoción</div>
-          <div class="card-title" style="font-size: 28px;">$72.000</div>
-          <p class="card-body">Paquete de 20 tramos — $3.600 por tramo.</p>
-        </div>
-        <div class="card elev-md">
-          <div class="card-kicker">Promoción</div>
-          <div class="card-title" style="font-size: 28px;">$108.000</div>
-          <p class="card-body">Paquete de 30 tramos — $3.600 por tramo.</p>
-        </div>
+    <div class="card elev-md" style="padding: 0;">
+      <div class="tab-bar" id="precios-tabs">
+        <button type="button" class="tab-btn active" data-tab="individual">Individual</button>
+        <button type="button" class="tab-btn" data-tab="promo20">20 tramos</button>
+        <button type="button" class="tab-btn" data-tab="promo30">30 tramos</button>
       </div>
-      <p style="font-size: 14.5px; line-height: 1.7; color: var(--color-text-muted); margin: 18px 0 0; max-width: 58ch;">Un tramo equivale a un solo recorrido — no incluye ida y vuelta. Para confirmar la reserva alcanza con abonar y enviarnos el comprobante.</p>
-    </details>
+      <div class="tab-panel" data-panel="individual">
+        <div class="price-display">$4.000</div>
+        <p class="card-body">1 tramo — un solo recorrido, ida o vuelta.</p>
+      </div>
+      <div class="tab-panel" data-panel="promo20" hidden>
+        <div class="price-display">$72.000</div>
+        <p class="card-body">Paquete de 20 tramos — $3.600 por tramo.</p>
+      </div>
+      <div class="tab-panel" data-panel="promo30" hidden>
+        <div class="price-display">$108.000</div>
+        <p class="card-body">Paquete de 30 tramos — $3.600 por tramo.</p>
+      </div>
+    </div>
+    <p style="font-size: 14.5px; line-height: 1.7; color: var(--color-text-muted); margin: 16px 0 0; max-width: 58ch;">Un tramo equivale a un solo recorrido — no incluye ida y vuelta. Para confirmar la reserva alcanza con abonar y enviarnos el comprobante.</p>
   </section>
 
   <section id="reserva" style="margin: 0 0 var(--space-8);">
@@ -565,18 +568,23 @@
     try { localStorage.setItem('theme', goingLight ? 'light' : 'dark'); } catch (e) {}
   });
 
-  // Opens the matching <details> when a nav/hero link points at #horarios or
-  // #precios, so those sections don't stay collapsed after the user navigates in.
-  function openDetailsFromHash() {
-    var hash = location.hash.replace('#', '');
-    var map = { horarios: 'horarios-details', precios: 'precios-details' };
-    if (map[hash]) {
-      var d = document.getElementById(map[hash]);
-      if (d) d.open = true;
-    }
+  function setupTabs(barId) {
+    var bar = document.getElementById(barId);
+    var section = bar.closest('section');
+    bar.addEventListener('click', function (e) {
+      var btn = e.target.closest('.tab-btn');
+      if (!btn) return;
+      var tab = btn.dataset.tab;
+      Array.prototype.forEach.call(bar.querySelectorAll('.tab-btn'), function (b) {
+        b.classList.toggle('active', b === btn);
+      });
+      Array.prototype.forEach.call(section.querySelectorAll('[data-panel]'), function (p) {
+        p.hidden = p.dataset.panel !== tab;
+      });
+    });
   }
-  window.addEventListener('hashchange', openDetailsFromHash);
-  openDetailsFromHash();
+  setupTabs('horarios-tabs');
+  setupTabs('precios-tabs');
 
   // Single source of truth for the "Salida de Puertos" stop times — feeds
   // both the schedule table above and the reservation widget's per-barrio
