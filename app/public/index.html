@@ -169,17 +169,6 @@
     .grid-2, .grid-3 { grid-template-columns: 1fr; }
   }
 
-  .meta-bar {
-    display: flex; flex-wrap: wrap; background: var(--color-surface); border: 1px solid var(--color-border);
-    border-radius: var(--radius-md); overflow: hidden; margin: var(--space-6) 0;
-  }
-  .meta-bar > div {
-    flex: 1; min-width: 150px; padding: 16px 20px; border-left: 1px solid var(--color-border);
-    font-size: 12.5px; letter-spacing: .04em; color: var(--color-text-muted);
-  }
-  .meta-bar > div:first-child { border-left: none; }
-  .meta-bar strong { display: block; margin-top: 3px; font-family: var(--font-heading); font-size: 16px; font-weight: var(--font-heading-weight); color: var(--color-text); letter-spacing: 0; }
-
   /* — booking stepper — */
   .booking { display: flex; flex-direction: column; padding: clamp(20px, 3vw, 36px); }
   .booking-step { display: flex; gap: 18px; position: relative; padding-bottom: var(--space-6); }
@@ -312,7 +301,7 @@
 
 <div style="max-width: 1200px; margin: 0 auto; padding: 0 clamp(20px, 5vw, 72px);">
 
-  <section style="padding: 72px 0 8px;">
+  <section style="padding: 72px 0 var(--space-8);">
     <span class="eyebrow">Minibus compartido — Ruta 26</span>
     <h1 style="font-size: clamp(38px, 6vw, 68px); letter-spacing: -0.02em; margin: 0 0 0 -0.03em;">
       <span style="display: block;">Tu viaje a Puertos,</span>
@@ -324,13 +313,6 @@
     <div style="display: flex; gap: var(--space-3); flex-wrap: wrap; margin-top: 28px;">
       <a href="#reserva" class="btn btn-primary">Reservar mi lugar</a>
       <a href="#horarios" class="btn btn-secondary">Ver horarios</a>
-    </div>
-
-    <div class="meta-bar">
-      <div>Recorrido<strong>Ruta 26 — Puertos</strong></div>
-      <div>Frecuencia<strong>Lunes a viernes</strong></div>
-      <div>Duración<strong>~15–20 min</strong></div>
-      <div>Tarifa<strong>Desde $4.000</strong></div>
     </div>
   </section>
 
