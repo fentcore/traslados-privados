@@ -320,13 +320,10 @@
     </div>`;
   }
 
-  const SEAT_COL_MAP = { 1: 1, 2: 2, 3: 4, 4: 5 };
-
   function seatButton(horarioKey, s) {
     const cls = ['seat'];
     if (s.occupied) cls.push('occupied');
-    const style = s.row <= 3 ? `grid-column:${SEAT_COL_MAP[s.col]};grid-row:${s.row}` : '';
-    return `<button type="button" class="${cls.join(' ')}" style="${style}" data-action="toggle-seat" data-key="${esc(horarioKey)}" data-seat="${esc(s.id)}" data-occupied="${s.occupied ? '1' : ''}">${esc(s.id)}</button>`;
+    return `<button type="button" class="${cls.join(' ')}" data-action="toggle-seat" data-key="${esc(horarioKey)}" data-seat="${esc(s.id)}" data-occupied="${s.occupied ? '1' : ''}">${esc(s.id)}</button>`;
   }
 
   function renderAsientosView() {
@@ -335,8 +332,9 @@
       return '<div class="view-pad"><div class="empty-note">Cargando asientos…</div></div>';
     }
     const current = maps.find(m => m.horarioKey === state.seatMapView) || maps[0];
-    const front = current.seats.filter(s => s.row <= 3);
-    const back = current.seats.filter(s => s.row > 3).slice().sort((a, b) => a.col - b.col);
+    const byRow = {};
+    current.seats.forEach(s => { (byRow[s.row] = byRow[s.row] || []).push(s); });
+    const rowNums = Object.keys(byRow).map(Number).sort((a, b) => a - b);
     const libres = current.seats.filter(s => !s.occupied).length;
     return `
     <div class="view-pad">
@@ -350,10 +348,12 @@
       <div class="van-wrap">
         <div class="van-plan blueprint">
           ${corners()}
-          <div class="van-cab">Conductor</div>
           <div class="van-seats">
-            ${front.map(s => seatButton(current.horarioKey, s)).join('')}
-            <div class="van-seat-row-back">${back.map(s => seatButton(current.horarioKey, s)).join('')}</div>
+            ${rowNums.map(r => `
+            <div class="van-row">
+              ${r === rowNums[0] ? '<div class="van-driver">Conductor</div>' : ''}
+              ${byRow[r].slice().sort((a, b) => a.col - b.col).map(s => seatButton(current.horarioKey, s)).join('')}
+            </div>`).join('')}
           </div>
         </div>
         <div class="van-side">

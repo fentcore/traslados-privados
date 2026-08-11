@@ -89,21 +89,20 @@ CREATE INDEX IF NOT EXISTS idx_users_workspace ON users(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_push_subs_user ON push_subscriptions(user_id);
 `;
 
-// Renault Master layout: 3 rows of 4 seats (2 + aisle + 2) behind the driver,
-// plus a 3-seat back bench. 15 passenger seats total.
+// Real Renault Master layout: front row is the driver + 2 passenger seats
+// (the driver isn't a bookable seat, so row 1 only has 2), then three rows of
+// 3, then a 4-across back bench. 15 bookable seats total.
+const SEAT_ROWS = [2, 3, 3, 3, 4];
+
 function defaultSeats() {
   const seats = [];
   let n = 1;
-  for (let row = 1; row <= 3; row++) {
-    for (let col = 1; col <= 4; col++) {
-      seats.push({ id: String(n), row, col, occupied: false });
+  SEAT_ROWS.forEach((count, i) => {
+    for (let col = 1; col <= count; col++) {
+      seats.push({ id: String(n), row: i + 1, col, occupied: false });
       n++;
     }
-  }
-  for (let col = 1; col <= 3; col++) {
-    seats.push({ id: String(n), row: 4, col, occupied: false });
-    n++;
-  }
+  });
   return seats;
 }
 
@@ -122,6 +121,21 @@ async function initSchema() {
        ON CONFLICT (horario_key) DO NOTHING`,
       [sm.key, sm.label, sm.order, JSON.stringify(defaultSeats())]
     );
+  }
+
+  // One-time layout fix: the real van is 2+3+3+3+4 (front row excludes the
+  // driver), replacing an earlier 4-per-row guess that never had a row 5.
+  // Self-disabling: once a horario has a row-5 seat, it's already migrated
+  // and this leaves it alone on every later boot.
+  const { rows } = await pool.query('SELECT horario_key, seats FROM seat_maps');
+  for (const row of rows) {
+    const hasNewLayout = Array.isArray(row.seats) && row.seats.some(s => s.row === 5);
+    if (!hasNewLayout) {
+      await pool.query(
+        'UPDATE seat_maps SET seats = $1, updated_at = now() WHERE horario_key = $2',
+        [JSON.stringify(defaultSeats()), row.horario_key]
+      );
+    }
   }
 }
 

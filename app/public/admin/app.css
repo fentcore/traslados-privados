@@ -104,20 +104,22 @@ body { background: var(--color-neutral-300); }
 }
 .van-tabs button.active { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-bg); }
 .van-wrap { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; margin-top: 14px; }
-.van-plan { flex: 0 0 auto; width: min(260px, 100%); padding: 18px 14px 20px; }
-.van-cab {
-  border-bottom: 1px solid var(--color-divider); margin: 0 0 16px; padding-bottom: 10px; text-align: center;
-  font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase;
-  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+.van-plan { flex: 0 0 auto; width: min(270px, 100%); padding: 22px 14px 18px; position: relative; }
+.van-plan::before {
+  content: 'FRENTE'; position: absolute; top: 6px; left: 0; right: 0; text-align: center;
+  font-size: 8px; letter-spacing: .15em; color: color-mix(in srgb, var(--color-text) 45%, transparent);
 }
-.van-seats { display: grid; grid-template-columns: 1fr 1fr 14px 1fr 1fr; gap: 8px; }
-.van-seat-row-back {
-  grid-column: 1 / -1; display: flex; justify-content: center; gap: 8px;
-  margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--color-divider);
+.van-seats { display: flex; flex-direction: column; gap: 8px; }
+.van-row { display: flex; gap: 8px; justify-content: center; }
+.van-row:not(:first-child) { padding-top: 8px; border-top: 1px dashed var(--color-divider); }
+.van-driver {
+  width: 44px; aspect-ratio: 1; border: 1px dashed color-mix(in srgb, var(--color-text) 55%, transparent);
+  display: flex; align-items: center; justify-content: center; text-align: center; flex: none;
+  font-family: var(--font-heading); font-weight: 600; font-size: 8px; letter-spacing: .02em;
+  text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 55%, transparent); padding: 2px;
 }
-.van-seat-row-back .seat { width: 44px; flex: none; }
-.van-seats .seat { width: 100%; aspect-ratio: 1; }
 .seat {
+  width: 44px; aspect-ratio: 1; flex: none;
   border: 1px solid var(--color-divider); background: var(--color-accent-100); color: var(--color-accent-800);
   font-family: var(--font-heading); font-weight: 600; font-size: 12px;
   display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;

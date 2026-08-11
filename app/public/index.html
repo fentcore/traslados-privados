@@ -109,23 +109,25 @@
   .van-tabs button.active { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
   .van-wrap { display: flex; gap: clamp(20px, 4vw, 40px); flex-wrap: wrap; align-items: flex-start; }
   .van-plan {
-    flex: 0 0 auto; width: min(270px, 100%); border: 2px solid var(--color-text);
-    border-radius: 34px 34px 12px 12px; padding: 18px 16px 22px; background: var(--color-bg);
+    flex: 0 0 auto; width: min(300px, 100%); border: 2px solid var(--color-text);
+    border-radius: 40px 40px 12px 12px; padding: 26px 16px 20px; background: var(--color-bg); position: relative;
   }
-  .van-cab {
-    border-bottom: 2px solid var(--color-text); margin: -18px -16px 18px; padding: 10px 16px 12px;
-    text-align: center; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
-    color: color-mix(in srgb, var(--color-text) 60%, transparent); border-radius: 32px 32px 0 0;
+  .van-plan::before {
+    content: 'FRENTE'; position: absolute; top: 8px; left: 0; right: 0; text-align: center;
+    font-size: 8.5px; letter-spacing: 0.15em; color: color-mix(in srgb, var(--color-text) 45%, transparent);
   }
-  .van-seats { display: grid; grid-template-columns: 1fr 1fr 14px 1fr 1fr; gap: 10px; }
-  .van-seat-row-back {
-    grid-column: 1 / -1; display: flex; justify-content: center; gap: 10px;
-    margin-top: 6px; padding-top: 12px; border-top: 1px dashed var(--color-divider);
+  .van-seats { display: flex; flex-direction: column; gap: 8px; }
+  .van-row { display: flex; gap: 8px; justify-content: center; }
+  .van-row:not(:first-child) { padding-top: 8px; border-top: 1px dashed var(--color-divider); }
+  .van-driver {
+    width: 48px; aspect-ratio: 1; border-radius: 8px 8px 3px 3px; border: 1px dashed color-mix(in srgb, var(--color-text) 55%, transparent);
+    display: flex; align-items: center; justify-content: center; text-align: center; flex: none;
+    font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 8.5px;
+    letter-spacing: 0.02em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 60%, transparent); padding: 2px;
   }
-  .van-seat-row-back .seat { width: 52px; flex: none; }
   .seat {
-    width: 100%; aspect-ratio: 1; border-radius: 8px 8px 3px 3px; border: 1px solid var(--color-divider);
-    display: flex; align-items: center; justify-content: center;
+    width: 48px; aspect-ratio: 1; border-radius: 8px 8px 3px 3px; border: 1px solid var(--color-divider);
+    display: flex; align-items: center; justify-content: center; flex: none;
     font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 13px;
     cursor: pointer; background: var(--color-accent-100); color: var(--color-accent-700); padding: 0;
   }
@@ -250,7 +252,6 @@
       <div class="van-tabs" id="van-tabs"></div>
       <div class="van-wrap">
         <div class="van-plan">
-          <div class="van-cab">Conductor</div>
           <div class="van-seats" id="van-seats"></div>
         </div>
         <div class="van-side">
@@ -303,7 +304,6 @@
 <script>
 (function () {
   var WHATSAPP_NUMBER = '5491180371010';
-  var COL_MAP = { 1: 1, 2: 2, 3: 4, 4: 5 };
   var seatMaps = [];
   var currentKey = '';
   var selected = new Set();
@@ -325,26 +325,27 @@
     }).join('');
   }
 
-  function seatButton(s, style) {
+  function seatButton(s) {
     var isSelected = selected.has(s.id);
     var cls = ['seat'];
     if (isSelected) cls.push('selected');
     else if (s.occupied) cls.push('occupied');
     var disabled = (s.occupied && !isSelected) ? 'disabled' : '';
-    return '<button type="button" class="' + cls.join(' ') + '" style="' + style + '" data-seat="' + esc(s.id) + '" ' + disabled + '>' + esc(s.id) + '</button>';
+    return '<button type="button" class="' + cls.join(' ') + '" data-seat="' + esc(s.id) + '" ' + disabled + '>' + esc(s.id) + '</button>';
   }
 
   function renderSeats() {
     var map = currentMap();
     var el = document.getElementById('van-seats');
     if (!map) { el.innerHTML = ''; return; }
-    var front = map.seats.filter(function (s) { return s.row <= 3; });
-    var back = map.seats.filter(function (s) { return s.row > 3; }).sort(function (a, b) { return a.col - b.col; });
-    var frontHtml = front.map(function (s) {
-      return seatButton(s, 'grid-column:' + COL_MAP[s.col] + ';grid-row:' + s.row + ';');
+    var byRow = {};
+    map.seats.forEach(function (s) { (byRow[s.row] = byRow[s.row] || []).push(s); });
+    var rowNums = Object.keys(byRow).map(Number).sort(function (a, b) { return a - b; });
+    el.innerHTML = rowNums.map(function (r) {
+      var seatsInRow = byRow[r].slice().sort(function (a, b) { return a.col - b.col; });
+      var driverHtml = r === rowNums[0] ? '<div class="van-driver">Conductor</div>' : '';
+      return '<div class="van-row">' + driverHtml + seatsInRow.map(seatButton).join('') + '</div>';
     }).join('');
-    var backHtml = '<div class="van-seat-row-back">' + back.map(function (s) { return seatButton(s, ''); }).join('') + '</div>';
-    el.innerHTML = frontHtml + backHtml;
     updateStatus();
   }
 
