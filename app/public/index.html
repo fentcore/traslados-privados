@@ -110,8 +110,8 @@
     position: sticky; top: 0; z-index: 20; backdrop-filter: blur(8px);
   }
   .nav-brand {
-    font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 23px;
-    letter-spacing: 0.03em; margin-right: auto; display: flex; align-items: center; gap: 10px;
+    font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 32px;
+    letter-spacing: 0.03em; margin-right: auto; display: flex; align-items: center; gap: 12px;
   }
   .brand-icon { flex: none; color: var(--color-accent); }
   .nav-links { display: flex; align-items: center; gap: var(--space-4); }
@@ -119,6 +119,10 @@
   .nav-links a:not(.btn):hover { color: var(--color-text); }
   @media (max-width: 760px) {
     .nav-links > a:not(.btn) { display: none; }
+  }
+  @media (max-width: 480px) {
+    .nav-brand { font-size: 22px; gap: 8px; }
+    .brand-icon { width: 34px; height: 18px; }
   }
   .theme-toggle {
     width: 36px; height: 36px; flex: none; border-radius: 50%; border: 1px solid var(--color-border-strong);
@@ -319,7 +323,7 @@
 <nav class="nav" style="padding-inline: max(clamp(20px,5vw,72px), calc((100% - 1200px) / 2 + clamp(20px,5vw,72px)));">
   <span class="nav-brand">
     ANDRES TRANSPORT
-    <svg class="brand-icon" width="30" height="16" viewBox="0 0 120 64" aria-hidden="true" focusable="false">
+    <svg class="brand-icon" width="48" height="26" viewBox="0 0 120 64" aria-hidden="true" focusable="false">
       <path fill="currentColor" d="M8,48 L8,18 Q8,12 14,12 L84,12 Q100,12 104,26 L104,40 Q104,48 96,48 Z"/>
       <rect x="18" y="18" width="64" height="14" rx="3" fill="var(--color-bg)"/>
       <circle cx="30" cy="48" r="10" fill="currentColor"/>
