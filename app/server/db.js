@@ -89,10 +89,10 @@ CREATE INDEX IF NOT EXISTS idx_users_workspace ON users(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_push_subs_user ON push_subscriptions(user_id);
 `;
 
-// Real Renault Master layout: front row is the driver + 2 passenger seats
-// (the driver isn't a bookable seat, so row 1 only has 2), then three rows of
-// 3, then a 4-across back bench. 15 bookable seats total.
-const SEAT_ROWS = [2, 3, 3, 3, 4];
+// Real Renault Master layout: front row is the driver + 1 passenger seat
+// (the driver isn't bookable, and the old front seat "1" was removed), then
+// three rows of 3, then a 4-across back bench. 14 bookable seats total.
+const SEAT_ROWS = [1, 3, 3, 3, 4];
 
 function defaultSeats() {
   const seats = [];
@@ -123,13 +123,13 @@ async function initSchema() {
     );
   }
 
-  // One-time layout fix: the real van is 2+3+3+3+4 (front row excludes the
-  // driver), replacing an earlier 4-per-row guess that never had a row 5.
-  // Self-disabling: once a horario has a row-5 seat, it's already migrated
-  // and this leaves it alone on every later boot.
+  // One-time layout fix: the van is 1+3+3+3+4 = 14 seats (front seat "1" next
+  // to the driver was removed). Self-disabling: once a horario already has
+  // exactly 14 seats it's on the current layout, so this leaves it alone.
+  const expectedCount = defaultSeats().length;
   const { rows } = await pool.query('SELECT horario_key, seats FROM seat_maps');
   for (const row of rows) {
-    const hasNewLayout = Array.isArray(row.seats) && row.seats.some(s => s.row === 5);
+    const hasNewLayout = Array.isArray(row.seats) && row.seats.length === expectedCount;
     if (!hasNewLayout) {
       await pool.query(
         'UPDATE seat_maps SET seats = $1, updated_at = now() WHERE horario_key = $2',
