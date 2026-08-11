@@ -188,8 +188,16 @@
         <div class="title">Traslados Privados</div>
         <div class="subtitle">${esc(state.user ? state.user.displayName : '')}</div>
       </div>
+      <button type="button" data-action="toggle-theme" class="btn btn-icon btn-secondary" aria-label="Cambiar tema claro/oscuro">${themeIcon()}</button>
       <button type="button" data-action="open-account" class="btn btn-secondary">Cuenta</button>
     </div>`;
+  }
+
+  function themeIcon() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    return isLight
+      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>';
   }
 
   function renderNotifBanner() {
@@ -681,6 +689,15 @@
     try { await navigator.clipboard.writeText(state.workspace.inviteCode); } catch (e) {}
   }
 
+  function toggleTheme() {
+    const htmlEl = document.documentElement;
+    const goingLight = htmlEl.getAttribute('data-theme') !== 'light';
+    if (goingLight) htmlEl.setAttribute('data-theme', 'light');
+    else htmlEl.removeAttribute('data-theme');
+    try { localStorage.setItem('theme', goingLight ? 'light' : 'dark'); } catch (e) {}
+    render();
+  }
+
   async function handleNewContact() {
     state.formError = '';
     const f = state.form;
@@ -931,6 +948,7 @@
       case 'export-excel': exportExcel(); break;
       case 'install-app': installApp(); break;
       case 'enable-push': enablePush(); break;
+      case 'toggle-theme': toggleTheme(); break;
     }
   });
 
