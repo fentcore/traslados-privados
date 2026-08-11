@@ -231,7 +231,8 @@
   .van-seats { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 8px; }
   .van-row { display: flex; gap: 8px; justify-content: center; }
   .van-row:not(:first-child) { padding-top: 8px; border-top: 1px dashed var(--color-border); }
-  .van-row[data-row="1"], .van-row[data-row="2"], .van-row[data-row="3"], .van-row[data-row="4"] { justify-content: flex-start; }
+  .van-row[data-row="1"] { justify-content: space-between; }
+  .van-row[data-row="2"], .van-row[data-row="3"], .van-row[data-row="4"] { justify-content: flex-start; }
   .van-driver {
     width: 46px; aspect-ratio: 1; border-radius: var(--radius-sm); border: 1px dashed var(--color-border-strong);
     display: flex; align-items: center; justify-content: center; text-align: center; flex: none;
