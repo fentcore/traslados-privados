@@ -227,7 +227,7 @@ textarea.input { min-height: 90px; resize: vertical; }
 
 /* — dialog — */
 .dialog-backdrop {
-  position: fixed; inset: 0; display: grid; place-items: center;
+  position: fixed; inset: 0; display: grid; place-items: center; overflow-y: auto;
   padding: var(--space-4);
   background: color-mix(in srgb, #000 55%, transparent);
 }
@@ -235,6 +235,8 @@ textarea.input { min-height: 90px; resize: vertical; }
   width: min(440px, 100%); display: flex; flex-direction: column; gap: var(--space-3);
   padding: var(--space-4); border-radius: var(--radius-lg);
   background: var(--color-surface); border: 1px solid var(--color-border); box-shadow: var(--shadow-lg);
+  max-height: calc(100vh - 2 * var(--space-4)); overflow-y: auto;
+  margin: auto 0;
 }
 .dialog-title { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 20px; }
 .dialog-body { font-size: 14px; opacity: 0.85; }

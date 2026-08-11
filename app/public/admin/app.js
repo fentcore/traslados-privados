@@ -138,16 +138,6 @@
   function seatMapsFor(prefix) { return state.seatMaps.filter(m => m.horarioKey.indexOf(prefix) === 0); }
   function seatMapByKey(key) { return state.seatMaps.find(m => m.horarioKey === key); }
 
-  function ensureFormAsientoDefaults() {
-    ['ida', 'vuelta'].forEach((leg) => {
-      const a = state.form.asientos[leg];
-      if (!a.horarioKey) {
-        const maps = seatMapsFor(legPrefix(leg));
-        if (maps.length) a.horarioKey = maps[0].horarioKey;
-      }
-    });
-  }
-
   // ---------- day-accurate occupancy (computed from contacts, not the
   // shared seat_maps.occupied flag which doesn't know about days) ----------
   function contactSeatsForDay(contact, horarioKey, dia) {
@@ -167,19 +157,20 @@
     return ids;
   }
 
-  function occupantsForDay(horarioKey, dia) {
+  function occupantsForDay(horarioKey, dia, excludeContactId) {
     const list = [];
     state.contacts.forEach((c) => {
       if (c.activoTramos === false) return;
+      if (excludeContactId !== undefined && String(c.id) === String(excludeContactId)) return;
       const seats = contactSeatsForDay(c, horarioKey, dia);
       if (seats.size) list.push({ nombre: c.nombre, seats: Array.from(seats).sort((a, b) => Number(a) - Number(b)) });
     });
     return list;
   }
 
-  function occupiedSeatIdsForDay(horarioKey, dia) {
+  function occupiedSeatIdsForDay(horarioKey, dia, excludeContactId) {
     const ids = new Set();
-    occupantsForDay(horarioKey, dia).forEach((o) => o.seats.forEach((s) => ids.add(s)));
+    occupantsForDay(horarioKey, dia, excludeContactId).forEach((o) => o.seats.forEach((s) => ids.add(s)));
     return ids;
   }
 
@@ -195,13 +186,13 @@
   // Which seats are already taken for a horario, across a specific set of
   // days — not just the flat horario-wide flag — so picking a seat for a
   // new client only blocks seats actually taken on the day(s) they travel.
-  function computeLegOccupied(map, days) {
+  function computeLegOccupied(map, days, excludeContactId) {
     if (!map) return new Set();
     if (!days || !days.length) {
       return new Set(map.seats.filter((s) => s.occupied).map((s) => s.id));
     }
     const ids = new Set();
-    days.forEach((dia) => occupiedSeatIdsForDay(map.horarioKey, dia).forEach((s) => ids.add(s)));
+    days.forEach((dia) => occupiedSeatIdsForDay(map.horarioKey, dia, excludeContactId).forEach((s) => ids.add(s)));
     return ids;
   }
 
@@ -235,59 +226,78 @@
     </div>`;
   }
 
+  function asientoObjFor(container) {
+    return container === 'edit' ? state.editingContact : state.form;
+  }
+
+  function ensureAsientoDefaults(asientos) {
+    ['ida', 'vuelta'].forEach((leg) => {
+      const a = asientos[leg];
+      if (!a.horarioKey) {
+        const maps = seatMapsFor(legPrefix(leg));
+        if (maps.length) a.horarioKey = maps[0].horarioKey;
+      }
+    });
+  }
+
   function resolveAsientoTarget(scope) {
-    const [leg, dia] = scope.split(':');
-    const a = state.form.asientos[leg];
+    const [container, leg, dia] = scope.split(':');
+    const obj = asientoObjFor(container);
+    if (!obj) return null;
+    const a = obj.asientos[leg];
     if (!a) return null;
     if (!dia) return a;
     return a.exceptions[dia] || null;
   }
 
-  function renderAsientoLeg(leg, label) {
-    const f = state.form;
-    const a = f.asientos[leg];
+  function renderAsientoLeg(container, leg, label) {
+    const obj = asientoObjFor(container);
+    const a = obj.asientos[leg];
     const maps = seatMapsFor(legPrefix(leg));
     if (!maps.length) {
       return `<div class="field"><label>${esc(label)}</label><p class="text-muted" style="font-size:13px">Cargando horarios…</p></div>`;
     }
     const current = seatMapByKey(a.horarioKey);
-    const excDays = DIAS.filter((d) => (f.dias || []).includes(d.key));
+    const excDays = DIAS.filter((d) => (obj.dias || []).includes(d.key));
     const mainDays = excDays.filter((d) => !a.exceptions[d.key]).map((d) => d.key);
-    const occupiedIds = computeLegOccupied(current, mainDays.length ? mainDays : (f.dias || []));
+    const excludeId = container === 'edit' ? obj.id : undefined;
+    const occupiedIds = computeLegOccupied(current, mainDays.length ? mainDays : (obj.dias || []), excludeId);
+    const scope = container + ':' + leg;
     return `
     <div class="field">
       <label>${esc(label)}</label>
       <div class="van-tabs">
-        ${maps.map((m) => `<button type="button" data-action="pick-horario" data-scope="${leg}" data-key="${esc(m.horarioKey)}" class="${m.horarioKey === a.horarioKey ? 'active' : ''}">${esc(m.horarioLabel)}</button>`).join('')}
+        ${maps.map((m) => `<button type="button" data-action="pick-horario" data-scope="${scope}" data-key="${esc(m.horarioKey)}" class="${m.horarioKey === a.horarioKey ? 'active' : ''}">${esc(m.horarioLabel)}</button>`).join('')}
       </div>
-      ${renderSeatPlan(current, a.seats, leg, occupiedIds)}
+      ${renderSeatPlan(current, a.seats, scope, occupiedIds)}
       <div class="van-legend">
         <span><i class="van-dot free"></i>Libre</span>
         <span><i class="van-dot selected"></i>Seleccionado</span>
         <span><i class="van-dot occupied"></i>Ocupado</span>
       </div>
       ${excDays.length > 1 ? `
-      <button type="button" class="btn btn-ghost" data-action="toggle-asiento-exc" data-leg="${leg}" style="align-self:flex-start;font-size:13px;padding-left:0">
+      <button type="button" class="btn btn-ghost" data-action="toggle-asiento-exc" data-container="${container}" data-leg="${leg}" style="align-self:flex-start;font-size:13px;padding-left:0">
         ${a.excOpen ? '– Ocultar asiento distinto por día' : '+ Asiento distinto algún día'}
       </button>
-      ${a.excOpen ? renderAsientoExceptions(leg, excDays) : ''}` : ''}
+      ${a.excOpen ? renderAsientoExceptions(container, leg, excDays) : ''}` : ''}
     </div>`;
   }
 
-  function renderAsientoExceptions(leg, excDays) {
-    const f = state.form;
-    const a = f.asientos[leg];
+  function renderAsientoExceptions(container, leg, excDays) {
+    const obj = asientoObjFor(container);
+    const a = obj.asientos[leg];
     const maps = seatMapsFor(legPrefix(leg));
+    const excludeId = container === 'edit' ? obj.id : undefined;
     return `
     <div class="asiento-exceptions">
       <div class="van-tabs">
-        ${excDays.map((d) => `<button type="button" data-action="toggle-exc-day" data-leg="${leg}" data-dia="${d.key}" class="${a.exceptions[d.key] ? 'active' : ''}">${esc(DIA_LABELS[d.key])}</button>`).join('')}
+        ${excDays.map((d) => `<button type="button" data-action="toggle-exc-day" data-container="${container}" data-leg="${leg}" data-dia="${d.key}" class="${a.exceptions[d.key] ? 'active' : ''}">${esc(DIA_LABELS[d.key])}</button>`).join('')}
       </div>
       ${excDays.filter((d) => a.exceptions[d.key]).map((d) => {
         const ex = a.exceptions[d.key];
-        const scope = leg + ':' + d.key;
+        const scope = container + ':' + leg + ':' + d.key;
         const exMap = seatMapByKey(ex.horarioKey);
-        const occupiedIds = computeLegOccupied(exMap, [d.key]);
+        const occupiedIds = computeLegOccupied(exMap, [d.key], excludeId);
         return `
         <div class="asiento-exception-day">
           <div class="asiento-exception-day-title">${esc(DIA_LABELS[d.key])}</div>
@@ -433,8 +443,8 @@
           ${segOpt('form', 'tipoViaje', 'vuelta', 'Vuelta', f.tipoViaje)}
           ${segOpt('form', 'tipoViaje', 'ambos', 'Ambos', f.tipoViaje)}
         </div></div>
-        ${f.tipoViaje !== 'vuelta' ? renderAsientoLeg('ida', 'Asiento de ida') : ''}
-        ${f.tipoViaje !== 'ida' ? renderAsientoLeg('vuelta', 'Asiento de vuelta') : ''}
+        ${f.tipoViaje !== 'vuelta' ? renderAsientoLeg('form', 'ida', 'Asiento de ida') : ''}
+        ${f.tipoViaje !== 'ida' ? renderAsientoLeg('form', 'vuelta', 'Asiento de vuelta') : ''}
         <div class="field"><label>Estado</label><div class="seg">
           ${segOpt('form', 'estado', 'pendiente', 'Pendiente', f.estado)}
           ${segOpt('form', 'estado', 'pagado', 'Pagado', f.estado)}
@@ -540,16 +550,6 @@
         <div style="font-family:var(--font-heading);font-weight:600;font-size:20px">Asientos</div>
         <div class="text-muted" style="font-size:12.5px">${dia ? 'Vista de solo lectura: quién tiene asiento asignado ese día, calculado a partir de los clientes cargados.' : 'Tocá un asiento para marcarlo ocupado o libre. Se actualiza al instante en la página pública.'}</div>
       </div>
-      <div class="van-tabs">
-        ${maps.map(m => `<button type="button" data-action="set-seatmap" data-key="${esc(m.horarioKey)}" class="${m.horarioKey === current.horarioKey ? 'active' : ''}">${esc(m.horarioLabel)}</button>`).join('')}
-      </div>
-      <div class="field" style="margin:0">
-        <label>Ver ocupación</label>
-        <div class="van-tabs">
-          <button type="button" data-action="set-seat-dia" data-dia="" class="${!dia ? 'active' : ''}">General</button>
-          ${DIAS.map(d => `<button type="button" data-action="set-seat-dia" data-dia="${d.key}" class="${dia === d.key ? 'active' : ''}">${esc(DIA_LABELS[d.key])}</button>`).join('')}
-        </div>
-      </div>
       <div class="van-wrap">
         <div class="van-plan">
           ${vanOutlineSvg()}
@@ -563,6 +563,19 @@
           </div>
         </div>
         <div class="van-side">
+          <div class="field" style="margin:0">
+            <label>Horario</label>
+            <div class="van-tabs">
+              ${maps.map(m => `<button type="button" data-action="set-seatmap" data-key="${esc(m.horarioKey)}" class="${m.horarioKey === current.horarioKey ? 'active' : ''}">${esc(m.horarioLabel)}</button>`).join('')}
+            </div>
+          </div>
+          <div class="field" style="margin:0">
+            <label>Día</label>
+            <div class="van-tabs">
+              <button type="button" data-action="set-seat-dia" data-dia="" class="${!dia ? 'active' : ''}">General</button>
+              ${DIAS.map(d => `<button type="button" data-action="set-seat-dia" data-dia="${d.key}" class="${dia === d.key ? 'active' : ''}">${esc(DIA_LABELS[d.key])}</button>`).join('')}
+            </div>
+          </div>
           <div class="van-legend">
             <span><i class="van-dot free"></i>Libre</span>
             <span><i class="van-dot occupied"></i>Ocupado</span>
@@ -678,6 +691,8 @@
 
   function renderEditDialog() {
     const ec = state.editingContact;
+    if (!ec.asientos) ec.asientos = { ida: emptyAsientoLeg(), vuelta: emptyAsientoLeg() };
+    ensureAsientoDefaults(ec.asientos);
     return `
     <div class="dialog-backdrop">
       <form data-form="edit-contact" class="dialog blueprint">
@@ -704,6 +719,8 @@
           ${segOpt('edit', 'tipoViaje', 'vuelta', 'Vuelta', ec.tipoViaje)}
           ${segOpt('edit', 'tipoViaje', 'ambos', 'Ambos', ec.tipoViaje)}
         </div></div>
+        ${ec.tipoViaje !== 'vuelta' ? renderAsientoLeg('edit', 'ida', 'Asiento de ida') : ''}
+        ${ec.tipoViaje !== 'ida' ? renderAsientoLeg('edit', 'vuelta', 'Asiento de vuelta') : ''}
         <div class="field"><label>Estado</label><div class="seg">
           ${segOpt('edit', 'estado', 'pendiente', 'Pendiente', ec.estado)}
           ${segOpt('edit', 'estado', 'pagado', 'Pagado', ec.estado)}
@@ -812,10 +829,24 @@
     else { dias.push(key); obj.horarios[key] = obj.horarios[key] || { ida: '', vuelta: '' }; }
   }
 
+  function cloneAsientoLeg(a) {
+    return {
+      horarioKey: (a && a.horarioKey) || '',
+      seats: (a && Array.isArray(a.seats)) ? a.seats.slice() : [],
+      excOpen: false,
+      exceptions: JSON.parse(JSON.stringify((a && a.exceptions) || {}))
+    };
+  }
+
   function openEdit(id) {
     const c = state.contacts.find(x => String(x.id) === String(id));
     if (!c) return;
-    state.editingContact = Object.assign({}, c, { dias: (c.dias || []).slice(), horarios: JSON.parse(JSON.stringify(c.horarios || {})) });
+    state.editingContact = Object.assign({}, c, {
+      dias: (c.dias || []).slice(),
+      horarios: JSON.parse(JSON.stringify(c.horarios || {})),
+      asientos: { ida: cloneAsientoLeg(c.asientos && c.asientos.ida), vuelta: cloneAsientoLeg(c.asientos && c.asientos.vuelta) }
+    });
+    ensureAsientoDefaults(state.editingContact.asientos);
     state.formError = '';
     render();
   }
@@ -918,36 +949,93 @@
     render();
   }
 
-  function toggleAsientoExceptionDay(leg, dia) {
-    const a = state.form.asientos[leg];
+  function toggleAsientoExceptionDay(container, leg, dia) {
+    const a = asientoObjFor(container).asientos[leg];
     if (a.exceptions[dia]) delete a.exceptions[dia];
     else a.exceptions[dia] = { horarioKey: a.horarioKey, seats: a.seats.slice() };
     render();
   }
 
-  async function markSeatOccupied(horarioKey, seatId) {
+  async function setSeatOccupied(horarioKey, seatId, occupied) {
     try {
       const data = await api('/seats/' + encodeURIComponent(horarioKey) + '/seat/' + encodeURIComponent(seatId), {
         method: 'PATCH',
-        body: JSON.stringify({ occupied: true })
+        body: JSON.stringify({ occupied })
       });
       state.seatMaps = state.seatMaps.map(m => m.horarioKey === data.seatMap.horarioKey ? data.seatMap : m);
     } catch (err) { console.error(err); }
   }
 
-  async function applyAsientoSelections(f) {
-    const jobs = [];
+  // Every (horarioKey, seatId) pair an "asientos" structure (form data or a
+  // saved contact's own field) references, main assignment plus exceptions.
+  function asientoSeatPairs(asientos) {
+    const pairs = [];
     ['ida', 'vuelta'].forEach((leg) => {
-      const a = f.asientos[leg];
-      if (a.horarioKey && a.seats.length) {
-        a.seats.forEach((seatId) => jobs.push(markSeatOccupied(a.horarioKey, seatId)));
-      }
-      Object.keys(a.exceptions).forEach((dia) => {
-        const ex = a.exceptions[dia];
-        if (ex.horarioKey && ex.seats.length) {
-          ex.seats.forEach((seatId) => jobs.push(markSeatOccupied(ex.horarioKey, seatId)));
-        }
+      const a = asientos && asientos[leg];
+      if (!a) return;
+      if (a.horarioKey) (a.seats || []).forEach((seatId) => pairs.push([a.horarioKey, seatId]));
+      const exceptions = a.exceptions || {};
+      Object.keys(exceptions).forEach((dia) => {
+        const ex = exceptions[dia];
+        if (ex.horarioKey) (ex.seats || []).forEach((seatId) => pairs.push([ex.horarioKey, seatId]));
       });
+    });
+    return pairs;
+  }
+
+  async function applyAsientoSelections(f) {
+    const jobs = asientoSeatPairs(f.asientos).map(([horarioKey, seatId]) => setSeatOccupied(horarioKey, seatId, true));
+    if (jobs.length) await Promise.all(jobs);
+  }
+
+  // A seat only goes back to "free" if no other contact still needs it —
+  // otherwise deleting/editing one contact would wrongly free a seat a
+  // different client is still holding on it.
+  function seatStillNeeded(horarioKey, seatId, excludeContactId) {
+    return state.contacts.some((c) => {
+      if (String(c.id) === String(excludeContactId)) return false;
+      return asientoSeatPairs(c.asientos).some(([hk, sid]) => hk === horarioKey && sid === seatId);
+    });
+  }
+
+  async function releaseAsientoSelections(asientos, excludeContactId) {
+    const pairs = asientoSeatPairs(asientos);
+    const seen = new Set();
+    const jobs = [];
+    pairs.forEach(([horarioKey, seatId]) => {
+      const key = horarioKey + ':' + seatId;
+      if (seen.has(key)) return;
+      seen.add(key);
+      if (!seatStillNeeded(horarioKey, seatId, excludeContactId)) {
+        jobs.push(setSeatOccupied(horarioKey, seatId, false));
+      }
+    });
+    if (jobs.length) await Promise.all(jobs);
+  }
+
+  // After editing a contact's seat assignment: free whatever it no longer
+  // holds (if nobody else needs it) and mark whatever it holds now.
+  async function reconcileAsientoChanges(beforeAsientos, afterAsientos, contactId) {
+    const pairKey = ([hk, sid]) => hk + ':' + sid;
+    const beforePairs = asientoSeatPairs(beforeAsientos);
+    const afterPairs = asientoSeatPairs(afterAsientos);
+    const afterKeys = new Set(afterPairs.map(pairKey));
+    const beforeKeys = new Set(beforePairs.map(pairKey));
+
+    const jobs = [];
+    const releaseSeen = new Set();
+    beforePairs.forEach(([hk, sid]) => {
+      const key = pairKey([hk, sid]);
+      if (afterKeys.has(key) || releaseSeen.has(key)) return;
+      releaseSeen.add(key);
+      if (!seatStillNeeded(hk, sid, contactId)) jobs.push(setSeatOccupied(hk, sid, false));
+    });
+    const occupySeen = new Set();
+    afterPairs.forEach(([hk, sid]) => {
+      const key = pairKey([hk, sid]);
+      if (beforeKeys.has(key) || occupySeen.has(key)) return;
+      occupySeen.add(key);
+      jobs.push(setSeatOccupied(hk, sid, true));
     });
     if (jobs.length) await Promise.all(jobs);
   }
@@ -978,7 +1066,7 @@
       await applyAsientoSelections(f);
       state.contacts = [data.contact, ...state.contacts];
       state.form = emptyForm();
-      ensureFormAsientoDefaults();
+      ensureAsientoDefaults(state.form.asientos);
       state.savedFlash = true;
       render();
       setTimeout(() => { state.savedFlash = false; render(); }, 2200);
@@ -992,8 +1080,12 @@
     state.formError = '';
     const ec = state.editingContact;
     if (!ec.nombre || !ec.nombre.trim()) { state.formError = 'El nombre es obligatorio.'; render(); return; }
+    const original = state.contacts.find(c => String(c.id) === String(ec.id));
+    const beforeAsientos = original ? original.asientos : {};
+    const payload = Object.assign({}, ec, { asientos: shapeAsientosPayload(ec) });
     try {
-      const data = await api('/contacts/' + ec.id, { method: 'PUT', body: JSON.stringify(ec) });
+      const data = await api('/contacts/' + ec.id, { method: 'PUT', body: JSON.stringify(payload) });
+      await reconcileAsientoChanges(beforeAsientos, data.contact.asientos, ec.id);
       state.contacts = state.contacts.map(c => c.id === data.contact.id ? data.contact : c);
       state.editingContact = null;
       render();
@@ -1055,9 +1147,11 @@
   }
 
   async function confirmDelete() {
-    const id = state.deletingContact.id;
+    const contact = state.deletingContact;
+    const id = contact.id;
     try {
       await api('/contacts/' + id, { method: 'DELETE' });
+      await releaseAsientoSelections(contact.asientos, id);
       state.contacts = state.contacts.filter(c => c.id !== id);
       state.deletingContact = null;
       render();
@@ -1072,7 +1166,8 @@
       const data = await api('/seats');
       state.seatMaps = data.seatMaps;
       if (!state.seatMapView && state.seatMaps.length) state.seatMapView = state.seatMaps[0].horarioKey;
-      ensureFormAsientoDefaults();
+      ensureAsientoDefaults(state.form.asientos);
+      if (state.editingContact) ensureAsientoDefaults(state.editingContact.asientos);
       render();
     } catch (err) { console.error(err); }
   }
@@ -1218,8 +1313,8 @@
       case 'toggle-seat': toggleSeat(btn.dataset.key, btn.dataset.seat, btn.dataset.occupied === '1'); break;
       case 'pick-horario': handlePickHorario(btn.dataset.scope, btn.dataset.key); break;
       case 'pick-seat': handlePickSeat(btn.dataset.scope, btn.dataset.seat); break;
-      case 'toggle-asiento-exc': { const a = state.form.asientos[btn.dataset.leg]; a.excOpen = !a.excOpen; render(); break; }
-      case 'toggle-exc-day': toggleAsientoExceptionDay(btn.dataset.leg, btn.dataset.dia); break;
+      case 'toggle-asiento-exc': { const a = asientoObjFor(btn.dataset.container).asientos[btn.dataset.leg]; a.excOpen = !a.excOpen; render(); break; }
+      case 'toggle-exc-day': toggleAsientoExceptionDay(btn.dataset.container, btn.dataset.leg, btn.dataset.dia); break;
       case 'sort': setSort(btn.dataset.key); break;
       case 'clear-date-filter': state.filterFrom = ''; state.filterTo = ''; render(); break;
       case 'clear-tramos-filter': state.tramosFilterDia = ''; state.tramosFilterHora = ''; render(); break;
