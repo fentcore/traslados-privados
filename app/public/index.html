@@ -147,6 +147,12 @@
   .schedule-row { display: flex; justify-content: space-between; font-size: 14px; padding: 7px 0; border-top: 1px solid var(--color-border); }
   .schedule-time { font-family: var(--font-heading); font-weight: var(--font-heading-weight); color: var(--color-accent); }
 
+  .route-groups { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-top: 4px; }
+  .route-group-label { font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); font-weight: 600; margin-bottom: 6px; }
+  @media (max-width: 480px) {
+    .route-groups { grid-template-columns: 1fr; }
+  }
+
   .route-list { position: relative; display: flex; flex-direction: column; }
   .route-list::before {
     content: ''; position: absolute; left: 5px; top: 12px; bottom: 12px; width: 1px;
@@ -164,6 +170,7 @@
 
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(16px, 3vw, 24px); }
   #horarios .grid-2 { align-items: start; }
+  #precios .grid-3 { align-items: start; }
   .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(16px, 3vw, 24px); }
   @media (max-width: 760px) {
     .grid-2, .grid-3 { grid-template-columns: 1fr; }
@@ -261,14 +268,9 @@
 
   .summary-status { font-size: 14px; color: var(--color-text-muted); margin: 0 0 14px; }
 
-  .exception-toggle {
-    align-self: flex-start; background: none; border: none; color: var(--color-accent);
-    font: inherit; font-weight: 700; font-size: 16.5px; cursor: pointer; padding: 4px 0;
-    text-decoration: underline; text-underline-offset: 3px;
-  }
-  .exception-toggle:hover { opacity: .8; }
+  .exception-disclosure { align-self: flex-start; }
   .exception-body {
-    display: flex; flex-direction: column; gap: var(--space-3); margin-top: 2px;
+    display: flex; flex-direction: column; gap: var(--space-3);
     padding: 16px; border: 1px dashed var(--color-border-strong); border-radius: var(--radius-md);
     background: var(--color-bg-alt);
   }
@@ -335,10 +337,16 @@
           <div class="card-kicker">Salida</div>
           <div class="card-title">Salida de Puertos</div>
           <p class="card-body">Parada en la puerta de cada barrio.</p>
-          <div style="font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); font-weight: 600; margin-top: 6px;">Mediodía</div>
-          <div class="route-list" id="salida-mediodia"></div>
-          <div style="font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); font-weight: 600; margin-top: 12px;">Tarde</div>
-          <div class="route-list" id="salida-tarde"></div>
+          <div class="route-groups">
+            <div>
+              <div class="route-group-label">Mediodía</div>
+              <div class="route-list" id="salida-mediodia"></div>
+            </div>
+            <div>
+              <div class="route-group-label">Tarde</div>
+              <div class="route-list" id="salida-tarde"></div>
+            </div>
+          </div>
         </div>
       </div>
       <p style="font-size: 14.5px; line-height: 1.6; color: var(--color-text-muted); margin: 18px 0 0;">Fuera de estos horarios no realizamos viajes — el servicio no opera fines de semana ni feriados.</p>
@@ -458,14 +466,16 @@
                 </svg>
                 <div class="van-plan-label">Frente</div><div class="van-seats" id="van-seats-ida"></div></div>
 
-                <button type="button" class="exception-toggle" id="ida-exception-toggle">+ Elegir un horario de ingreso distinto por día</button>
-                <div class="exception-body" id="ida-exception-body" style="display: none;">
-                  <div class="exception-row" id="ida-exception-dias-row">
-                    <label>¿Qué días tenés un horario distinto?</label>
-                    <div class="seg seg-sm" id="ida-exception-dias"></div>
+                <details class="disclosure exception-disclosure" id="ida-exception-details">
+                  <summary>Elegir un horario de ingreso distinto por día <span class="disclosure-arrow">▾</span></summary>
+                  <div class="exception-body">
+                    <div class="exception-row" id="ida-exception-dias-row">
+                      <label>¿Qué días tenés un horario distinto?</label>
+                      <div class="seg seg-sm" id="ida-exception-dias"></div>
+                    </div>
+                    <div id="ida-exception-days"></div>
                   </div>
-                  <div id="ida-exception-days"></div>
-                </div>
+                </details>
               </div>
               <div class="leg" id="leg-regreso">
                 <div class="leg-title"><span class="leg-num" id="leg-regreso-num" style="display: none;">2</span>Regreso — Salida de Puertos</div>
@@ -478,14 +488,16 @@
                 </svg>
                 <div class="van-plan-label">Frente</div><div class="van-seats" id="van-seats-regreso"></div></div>
 
-                <button type="button" class="exception-toggle" id="regreso-exception-toggle">+ Elegir un horario de regreso distinto por día</button>
-                <div class="exception-body" id="regreso-exception-body" style="display: none;">
-                  <div class="exception-row" id="regreso-exception-dias-row">
-                    <label>¿Qué días tenés un horario distinto?</label>
-                    <div class="seg seg-sm" id="regreso-exception-dias"></div>
+                <details class="disclosure exception-disclosure" id="regreso-exception-details">
+                  <summary>Elegir un horario de regreso distinto por día <span class="disclosure-arrow">▾</span></summary>
+                  <div class="exception-body">
+                    <div class="exception-row" id="regreso-exception-dias-row">
+                      <label>¿Qué días tenés un horario distinto?</label>
+                      <div class="seg seg-sm" id="regreso-exception-dias"></div>
+                    </div>
+                    <div id="regreso-exception-days"></div>
                   </div>
-                  <div id="regreso-exception-days"></div>
-                </div>
+                </details>
               </div>
             </div>
             <div class="van-legend" style="margin-top: 4px;">
@@ -632,7 +644,6 @@
   var selectedRegreso = new Set();
   var selectedDias = new Set();
 
-  var LEG_NOUN = { ida: 'ingreso', regreso: 'regreso' };
   var exceptions = {
     ida: { open: false, days: {} },
     regreso: { open: false, days: {} }
@@ -640,11 +651,6 @@
   function legPrefix(leg) { return leg === 'ida' ? 'ingreso' : 'salida'; }
   function currentForLeg(leg) { return leg === 'ida' ? currentIda : currentRegreso; }
   function defaultSeatsForLeg(leg) { return leg === 'ida' ? selectedIda : selectedRegreso; }
-  function exceptionToggleLabel(leg, open) {
-    return open
-      ? '– Ocultar horarios de ' + LEG_NOUN[leg] + ' por día'
-      : '+ Elegir un horario de ' + LEG_NOUN[leg] + ' distinto por día';
-  }
 
   function esc(v) {
     return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
@@ -801,12 +807,8 @@
     days.forEach(function (d) { renderExceptionDayContent(leg, d); });
   }
 
-  function closeException(leg) {
-    var exc = exceptions[leg];
-    exc.open = false;
-    exc.days = {};
-    document.getElementById(leg + '-exception-body').style.display = 'none';
-    document.getElementById(leg + '-exception-toggle').textContent = exceptionToggleLabel(leg, false);
+  function resetExceptionDays(leg) {
+    exceptions[leg].days = {};
   }
 
   function buildLegSummary(leg, barrio) {
@@ -976,17 +978,14 @@
   });
 
   ['ida', 'regreso'].forEach(function (leg) {
-    document.getElementById(leg + '-exception-toggle').addEventListener('click', function () {
+    document.getElementById(leg + '-exception-details').addEventListener('toggle', function () {
       var exc = exceptions[leg];
-      exc.open = !exc.open;
-      var body = document.getElementById(leg + '-exception-body');
+      exc.open = this.open;
       if (exc.open) {
-        body.style.display = 'flex';
-        this.textContent = exceptionToggleLabel(leg, true);
         renderExceptionDiaPicker(leg);
         renderExceptionDays(leg);
       } else {
-        closeException(leg);
+        resetExceptionDays(leg);
       }
       updateStatus();
     });
