@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS contacts (
   horario_vuelta TEXT DEFAULT '',
   horarios JSONB DEFAULT '{}'::jsonb,
   asientos JSONB DEFAULT '{}'::jsonb,
+  dias_tipo JSONB DEFAULT '{}'::jsonb,
   activo_tramos BOOLEAN NOT NULL DEFAULT true,
   created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -49,7 +50,20 @@ ALTER TABLE contacts ADD COLUMN IF NOT EXISTS horario_ida TEXT DEFAULT '';
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS horario_vuelta TEXT DEFAULT '';
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS horarios JSONB DEFAULT '{}'::jsonb;
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS asientos JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS dias_tipo JSONB DEFAULT '{}'::jsonb;
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS activo_tramos BOOLEAN NOT NULL DEFAULT true;
+
+-- Per-day trip type (ida/vuelta/ambos) used to live only as one tipo_viaje
+-- value shared by the whole contact. Backfill dias_tipo from it so every day
+-- already in `dias` keeps exactly the ida/vuelta/ambos meaning it already had.
+-- Self-limiting: only rows with an empty dias_tipo are touched, and this
+-- query fills it in, so a row is never rewritten on a later boot.
+UPDATE contacts
+SET dias_tipo = (
+  SELECT COALESCE(jsonb_object_agg(d, tipo_viaje), '{}'::jsonb)
+  FROM jsonb_array_elements_text(dias) AS d
+)
+WHERE dias_tipo = '{}'::jsonb AND jsonb_array_length(dias) > 0;
 
 -- One-time migration from the columns' previous names (en_tramos / horarios_dias)
 -- and previous "renovar" estado value. Self-disabling: once the old columns are

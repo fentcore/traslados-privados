@@ -45,6 +45,20 @@ body { background: var(--color-bg-alt); }
 }
 .day-circle.active { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-accent-ink); }
 
+/* Per-day trip type + time cards shown under the day picker once a day is
+   selected — same dashed-container language as .asiento-exceptions so a
+   contact's whole week reads as one consistent, scannable block. */
+.dia-tipo-cards {
+  display: flex; flex-direction: column; gap: 12px; padding: 12px; margin-top: 10px;
+  border: 1px dashed var(--color-border-strong); border-radius: var(--radius-md); background: var(--color-bg-alt);
+}
+.dia-tipo-card { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px dashed var(--color-border); }
+.dia-tipo-card:first-child { padding-top: 0; border-top: none; }
+.dia-tipo-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.dia-tipo-card-name { font-size: 13px; font-weight: 700; }
+.dia-tipo-times { display: flex; gap: 8px; }
+.dia-tipo-times .input { flex: 1; min-width: 0; }
+
 .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
 .stat-grid .card { padding: 12px 10px; gap: 3px; }
 .stat-grid .card-title { font-size: 20px; }

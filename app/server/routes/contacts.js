@@ -57,6 +57,27 @@ function sanitizeAsientos(input) {
   };
 }
 
+// Per-day trip type: which of ida/vuelta/ambos applies to each individual
+// day in `dias` (e.g. lunes solo ida, miércoles ida y vuelta). Days missing
+// from the input default to 'ambos', same as the old contact-wide default.
+function sanitizeDiasTipo(input, dias) {
+  const out = {};
+  for (const dia of dias) {
+    const v = input && input[dia];
+    out[dia] = TIPO_VALID.has(v) ? v : 'ambos';
+  }
+  return out;
+}
+
+// tipo_viaje stays on the row as a simple summary (used for the Contactos
+// list filter and the Excel export): the shared value when every day agrees,
+// otherwise 'ambos' since that's the superset of a mixed week.
+function summarizeTipoViaje(diasTipo, dias) {
+  if (!dias.length) return 'ambos';
+  const values = new Set(dias.map(d => diasTipo[d]));
+  return values.size === 1 ? Array.from(values)[0] : 'ambos';
+}
+
 function serialize(row) {
   return {
     id: row.id,
@@ -70,6 +91,7 @@ function serialize(row) {
     fecha: row.fecha ? new Date(row.fecha).toISOString().slice(0, 10) : '',
     tipoViaje: row.tipo_viaje || 'ambos',
     dias: Array.isArray(row.dias) ? row.dias : [],
+    diasTipo: (row.dias_tipo && typeof row.dias_tipo === 'object') ? row.dias_tipo : {},
     horarios: (row.horarios && typeof row.horarios === 'object') ? row.horarios : {},
     asientos: (row.asientos && typeof row.asientos === 'object') ? row.asientos : {},
     activoTramos: row.activo_tramos !== false,
@@ -80,6 +102,7 @@ function serialize(row) {
 
 function sanitizeInput(body) {
   const dias = Array.isArray(body.dias) ? body.dias.filter(d => DIAS_VALID.has(d)) : [];
+  const diasTipo = sanitizeDiasTipo(body.diasTipo, dias);
   return {
     nombre: String(body.nombre || '').trim().slice(0, 200),
     barrio: String(body.barrio || '').trim().slice(0, 200),
@@ -89,8 +112,9 @@ function sanitizeInput(body) {
     monto: Math.max(0, Number(body.monto) || 0),
     estado: ESTADO_VALID.has(body.estado) ? body.estado : 'pendiente',
     fecha: body.fecha ? String(body.fecha).slice(0, 10) : null,
-    tipoViaje: TIPO_VALID.has(body.tipoViaje) ? body.tipoViaje : 'ambos',
+    tipoViaje: summarizeTipoViaje(diasTipo, dias),
     dias,
+    diasTipo,
     horarios: sanitizeHorarios(body.horarios, dias),
     asientos: sanitizeAsientos(body.asientos)
   };
@@ -124,9 +148,9 @@ router.post('/', async (req, res) => {
   if (!data.nombre) return res.status(400).json({ error: 'El nombre es obligatorio.' });
   try {
     const { rows } = await pool.query(
-      `INSERT INTO contacts (workspace_id, nombre, barrio, tramos, mail, telefono, monto, estado, fecha, tipo_viaje, dias, horarios, asientos, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
-      [req.workspaceId, data.nombre, data.barrio, data.tramos, data.mail, data.telefono, data.monto, data.estado, data.fecha, data.tipoViaje, JSON.stringify(data.dias), JSON.stringify(data.horarios), JSON.stringify(data.asientos), req.userId]
+      `INSERT INTO contacts (workspace_id, nombre, barrio, tramos, mail, telefono, monto, estado, fecha, tipo_viaje, dias, horarios, asientos, created_by, dias_tipo)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
+      [req.workspaceId, data.nombre, data.barrio, data.tramos, data.mail, data.telefono, data.monto, data.estado, data.fecha, data.tipoViaje, JSON.stringify(data.dias), JSON.stringify(data.horarios), JSON.stringify(data.asientos), req.userId, JSON.stringify(data.diasTipo)]
     );
     const contact = rows[0];
     res.status(201).json({ contact: serialize(contact) });
@@ -148,9 +172,9 @@ router.put('/:id', async (req, res) => {
   if (!data.nombre) return res.status(400).json({ error: 'El nombre es obligatorio.' });
   try {
     const { rows } = await pool.query(
-      `UPDATE contacts SET nombre=$1, barrio=$2, tramos=$3, mail=$4, telefono=$5, monto=$6, estado=$7, fecha=$8, tipo_viaje=$9, dias=$10, horarios=$11, asientos=$12, updated_at=now()
-       WHERE id=$13 AND workspace_id=$14 RETURNING *`,
-      [data.nombre, data.barrio, data.tramos, data.mail, data.telefono, data.monto, data.estado, data.fecha, data.tipoViaje, JSON.stringify(data.dias), JSON.stringify(data.horarios), JSON.stringify(data.asientos), req.params.id, req.workspaceId]
+      `UPDATE contacts SET nombre=$1, barrio=$2, tramos=$3, mail=$4, telefono=$5, monto=$6, estado=$7, fecha=$8, tipo_viaje=$9, dias=$10, horarios=$11, asientos=$12, dias_tipo=$13, updated_at=now()
+       WHERE id=$14 AND workspace_id=$15 RETURNING *`,
+      [data.nombre, data.barrio, data.tramos, data.mail, data.telefono, data.monto, data.estado, data.fecha, data.tipoViaje, JSON.stringify(data.dias), JSON.stringify(data.horarios), JSON.stringify(data.asientos), JSON.stringify(data.diasTipo), req.params.id, req.workspaceId]
     );
     if (!rows.length) return res.status(404).json({ error: 'Contacto no encontrado.' });
     res.json({ contact: serialize(rows[0]) });

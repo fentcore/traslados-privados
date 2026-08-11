@@ -15,7 +15,7 @@
   const emptyAsientoLeg = () => ({ horarioKey: '', seats: [], excOpen: false, exceptions: {} });
   const emptyForm = () => ({
     nombre: '', barrio: '', tramos: '', mail: '', telefono: '', monto: '', estado: 'pendiente', fecha: '',
-    tipoViaje: 'ambos', dias: [], horarios: {},
+    tipoViaje: 'ambos', dias: [], diasTipo: {}, horarios: {},
     asientos: { ida: emptyAsientoLeg(), vuelta: emptyAsientoLeg() }
   });
 
@@ -112,25 +112,65 @@
     return `<label class="seg-opt"><input type="radio" name="${scope}-${field}" value="${value}" data-action="seg" data-scope="${scope}" data-field="${field}" ${checked}/>${label}</label>`;
   }
 
-  function horarioPorDia(scope, obj) {
+  // Per-day trip type: which day is only ida, only vuelta, or ambos.
+  // Falls back to 'ambos' for a day that hasn't been set yet.
+  function diaTipoFor(obj, dia) {
+    return (obj.diasTipo && obj.diasTipo[dia]) || 'ambos';
+  }
+
+  function diaNeedsLeg(obj, dia, leg) {
+    const t = diaTipoFor(obj, dia);
+    return t === 'ambos' || t === leg;
+  }
+
+  // Whether the ida/vuelta seat picker should show at all: yes if any
+  // selected day needs that leg, or if no day is picked yet (so an admin
+  // can preassign a seat before choosing days).
+  function anyDiaNeedsLeg(obj, leg) {
     const dias = obj.dias || [];
-    if (!dias.length) return '';
+    if (!dias.length) return true;
+    return dias.some((d) => diaNeedsLeg(obj, d, leg));
+  }
+
+  function segOptDia(scope, dia, value, label, current) {
+    const checked = current === value ? 'checked' : '';
+    return `<label class="seg-opt"><input type="radio" name="${scope}-diatipo-${dia}" value="${value}" data-action="seg-dia" data-scope="${scope}" data-dia="${dia}" ${checked}/>${label}</label>`;
+  }
+
+  // Combined "which days, and for each one is it ida / vuelta / ambos, plus
+  // its own time(s)" block, shared by the new-contact form and the edit dialog.
+  function renderDiasSection(scope, obj, toggleAction) {
+    const dias = obj.dias || [];
     const path = scope === 'form' ? 'form.horarios' : 'editingContact.horarios';
     const selected = DIAS.filter(d => dias.includes(d.key));
     return `
     <div class="field">
-      <label>Horario por día</label>
-      <div style="display:flex;flex-direction:column;gap:8px">
+      <label>Días de traslado</label>
+      <div class="day-picker">
+        ${DIAS.map(d => `<button type="button" class="day-circle ${dias.includes(d.key) ? 'active' : ''}" data-action="${toggleAction}" data-key="${d.key}">${d.label}</button>`).join('')}
+      </div>
+      ${selected.length ? `
+      <div class="dia-tipo-cards">
         ${selected.map(d => {
+          const tipo = diaTipoFor(obj, d.key);
           const h = (obj.horarios && obj.horarios[d.key]) || { ida: '', vuelta: '' };
           return `
-          <div style="display:flex;gap:8px;align-items:center">
-            <span style="width:32px;font-size:12.5px;font-weight:600;flex-shrink:0">${DIA_LABELS[d.key]}</span>
-            <input type="time" class="input" data-bind="${path}.${d.key}.ida" value="${esc(h.ida)}" placeholder="Ida" style="flex:1;min-width:0" />
-            <input type="time" class="input" data-bind="${path}.${d.key}.vuelta" value="${esc(h.vuelta)}" placeholder="Vuelta" style="flex:1;min-width:0" />
+          <div class="dia-tipo-card">
+            <div class="dia-tipo-card-head">
+              <span class="dia-tipo-card-name">${DIA_LABELS[d.key]}</span>
+              <div class="seg">
+                ${segOptDia(scope, d.key, 'ida', 'Ida', tipo)}
+                ${segOptDia(scope, d.key, 'vuelta', 'Vuelta', tipo)}
+                ${segOptDia(scope, d.key, 'ambos', 'Ambos', tipo)}
+              </div>
+            </div>
+            <div class="dia-tipo-times">
+              ${tipo !== 'vuelta' ? `<input type="time" class="input" data-bind="${path}.${d.key}.ida" value="${esc(h.ida)}" placeholder="Hora ida" />` : ''}
+              ${tipo !== 'ida' ? `<input type="time" class="input" data-bind="${path}.${d.key}.vuelta" value="${esc(h.vuelta)}" placeholder="Hora vuelta" />` : ''}
+            </div>
           </div>`;
         }).join('')}
-      </div>
+      </div>` : `<p class="text-muted" style="font-size:12.5px;margin:6px 0 0">Elegí uno o más días para definir su horario y tipo de viaje.</p>`}
     </div>`;
   }
 
@@ -144,8 +184,10 @@
   function contactSeatsForDay(contact, horarioKey, dia) {
     const ids = new Set();
     if (!contact.dias || !contact.dias.includes(dia)) return ids;
+    const tipo = (contact.diasTipo && contact.diasTipo[dia]) || contact.tipoViaje || 'ambos';
     const asientos = contact.asientos || {};
     ['ida', 'vuelta'].forEach((leg) => {
+      if (tipo !== 'ambos' && tipo !== leg) return;
       const a = asientos[leg];
       if (!a) return;
       const ex = a.exceptions && a.exceptions[dia];
@@ -259,10 +301,11 @@
       return `<div class="field"><label>${esc(label)}</label><p class="text-muted" style="font-size:13px">Cargando horarios…</p></div>`;
     }
     const current = seatMapByKey(a.horarioKey);
-    const excDays = DIAS.filter((d) => (obj.dias || []).includes(d.key));
+    const legDays = (obj.dias || []).filter((d) => diaNeedsLeg(obj, d, leg));
+    const excDays = DIAS.filter((d) => legDays.includes(d.key));
     const mainDays = excDays.filter((d) => !a.exceptions[d.key]).map((d) => d.key);
     const excludeId = container === 'edit' ? obj.id : undefined;
-    const occupiedIds = computeLegOccupied(current, mainDays.length ? mainDays : (obj.dias || []), excludeId);
+    const occupiedIds = computeLegOccupied(current, mainDays.length ? mainDays : legDays, excludeId);
     const scope = container + ':' + leg;
     return `
     <div class="field">
@@ -432,20 +475,9 @@
         <div class="field"><label>Email</label><input id="f-mail" type="email" class="input" data-bind="form.mail" value="${esc(f.mail)}" placeholder="nombre@mail.com" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" /></div>
         <div class="field"><label>Teléfono</label><input id="f-telefono" type="tel" class="input" data-bind="form.telefono" value="${esc(f.telefono)}" placeholder="11 1234-5678" /></div>
         <div class="field"><label>Fecha</label><input id="f-fecha" type="date" class="input" data-bind="form.fecha" value="${esc(f.fecha)}" /></div>
-        <div class="field">
-          <label>Días de traslado</label>
-          <div class="day-picker">
-            ${DIAS.map(d => `<button type="button" class="day-circle ${f.dias.includes(d.key) ? 'active' : ''}" data-action="toggle-dia" data-key="${d.key}">${d.label}</button>`).join('')}
-          </div>
-        </div>
-        ${horarioPorDia('form', f)}
-        <div class="field"><label>Tipo de viaje</label><div class="seg">
-          ${segOpt('form', 'tipoViaje', 'ida', 'Ida', f.tipoViaje)}
-          ${segOpt('form', 'tipoViaje', 'vuelta', 'Vuelta', f.tipoViaje)}
-          ${segOpt('form', 'tipoViaje', 'ambos', 'Ambos', f.tipoViaje)}
-        </div></div>
-        ${f.tipoViaje !== 'vuelta' ? renderAsientoLeg('form', 'ida', 'Asiento de ida') : ''}
-        ${f.tipoViaje !== 'ida' ? renderAsientoLeg('form', 'vuelta', 'Asiento de vuelta') : ''}
+        ${renderDiasSection('form', f, 'toggle-dia')}
+        ${anyDiaNeedsLeg(f, 'ida') ? renderAsientoLeg('form', 'ida', 'Asiento de ida') : ''}
+        ${anyDiaNeedsLeg(f, 'vuelta') ? renderAsientoLeg('form', 'vuelta', 'Asiento de vuelta') : ''}
         <div class="field"><label>Estado</label><div class="seg">
           ${segOpt('form', 'estado', 'pendiente', 'Pendiente', f.estado)}
           ${segOpt('form', 'estado', 'pagado', 'Pagado', f.estado)}
@@ -462,8 +494,10 @@
     if (!c.dias || !c.dias.length) return 'Sin días asignados';
     return DIAS.filter(d => c.dias.includes(d.key)).map(d => {
       const h = (c.horarios && c.horarios[d.key]) || {};
+      const tipo = (c.diasTipo && c.diasTipo[d.key]) || c.tipoViaje || 'ambos';
+      const tipoTag = tipo !== 'ambos' ? ` (${tipoLabel(tipo)})` : '';
       const tiempo = (h.ida || h.vuelta) ? ` ${h.ida || '—'}/${h.vuelta || '—'}` : '';
-      return `${DIA_LABELS[d.key]}${tiempo}`;
+      return `${DIA_LABELS[d.key]}${tipoTag}${tiempo}`;
     }).join(' · ');
   }
 
@@ -599,7 +633,7 @@
     if (q) list = list.filter(c => c.nombre.toLowerCase().includes(q) || (c.barrio || '').toLowerCase().includes(q));
     if (state.filterFrom) list = list.filter(c => c.fecha && c.fecha >= state.filterFrom);
     if (state.filterTo) list = list.filter(c => c.fecha && c.fecha <= state.filterTo);
-    if (state.filterTipo !== 'todos') list = list.filter(c => (c.tipoViaje || 'ambos') === state.filterTipo);
+    if (state.filterTipo !== 'todos') list = list.filter(c => summaryTipoViaje(c) === state.filterTipo);
     const key = state.sortKey, dir = state.sortDir;
     return list.slice().sort((a, b) => {
       let av = a[key], bv = b[key];
@@ -612,7 +646,16 @@
 
   function fmtMoney(n) { return '$ ' + Number(n || 0).toLocaleString('es-AR'); }
   function fmtFecha(f) { return f ? f.split('-').reverse().join('/') : '—'; }
-  function tipoLabel(v) { return v === 'ida' ? 'Ida' : v === 'vuelta' ? 'Vuelta' : 'Ambos'; }
+  function tipoLabel(v) { return v === 'ida' ? 'Ida' : v === 'vuelta' ? 'Vuelta' : v === 'mixto' ? 'Mixto' : 'Ambos'; }
+
+  // Summary tipo used in the Contactos table/filter/export: the shared
+  // value when every travel day agrees, otherwise 'mixto'.
+  function summaryTipoViaje(c) {
+    const dias = c.dias || [];
+    if (!dias.length) return c.tipoViaje || 'ambos';
+    const tipos = new Set(dias.map(d => (c.diasTipo && c.diasTipo[d]) || c.tipoViaje || 'ambos'));
+    return tipos.size === 1 ? Array.from(tipos)[0] : 'mixto';
+  }
   function estadoInfo(estado) {
     if (estado === 'pagado') return { label: 'Pagado', bg: 'var(--color-accent-100)', fg: 'var(--color-accent-800)' };
     if (estado === 'sin_tramos') return { label: 'Sin tramos', bg: 'var(--color-accent-2-100)', fg: 'var(--color-accent-2-800)' };
@@ -627,7 +670,7 @@
       <td style="text-align:center">${c.tramos}</td>
       <td style="text-align:right;white-space:nowrap">${fmtMoney(c.monto)}</td>
       <td style="white-space:nowrap">${fmtFecha(c.fecha)}</td>
-      <td style="white-space:nowrap">${tipoLabel(c.tipoViaje)}</td>
+      <td style="white-space:nowrap">${tipoLabel(summaryTipoViaje(c))}</td>
       <td><span class="status-pill" data-action="toggle-estado" data-id="${c.id}" style="background:${estadoInfo(c.estado).bg};color:${estadoInfo(c.estado).fg}">${estadoInfo(c.estado).label}</span></td>
       <td><div class="row-actions">
         <button type="button" class="edit" data-action="edit-contact" data-id="${c.id}">Editar</button>
@@ -691,6 +734,7 @@
           ${segOpt('filter', 'tipo', 'ida', 'Ida', state.filterTipo)}
           ${segOpt('filter', 'tipo', 'vuelta', 'Vuelta', state.filterTipo)}
           ${segOpt('filter', 'tipo', 'ambos', 'Ambos', state.filterTipo)}
+          ${segOpt('filter', 'tipo', 'mixto', 'Mixto', state.filterTipo)}
         </div>
       </div>
       ${contactTable(activeRows, arrow, true)}
@@ -723,20 +767,9 @@
         <div class="field"><label>Email</label><input id="e-mail" type="email" class="input" data-bind="editingContact.mail" value="${esc(ec.mail)}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" /></div>
         <div class="field"><label>Teléfono</label><input id="e-telefono" type="tel" class="input" data-bind="editingContact.telefono" value="${esc(ec.telefono)}" /></div>
         <div class="field"><label>Fecha</label><input id="e-fecha" type="date" class="input" data-bind="editingContact.fecha" value="${esc(ec.fecha)}" /></div>
-        <div class="field">
-          <label>Días de traslado</label>
-          <div class="day-picker">
-            ${DIAS.map(d => `<button type="button" class="day-circle ${(ec.dias || []).includes(d.key) ? 'active' : ''}" data-action="toggle-dia-edit" data-key="${d.key}">${d.label}</button>`).join('')}
-          </div>
-        </div>
-        ${horarioPorDia('edit', ec)}
-        <div class="field"><label>Tipo de viaje</label><div class="seg">
-          ${segOpt('edit', 'tipoViaje', 'ida', 'Ida', ec.tipoViaje)}
-          ${segOpt('edit', 'tipoViaje', 'vuelta', 'Vuelta', ec.tipoViaje)}
-          ${segOpt('edit', 'tipoViaje', 'ambos', 'Ambos', ec.tipoViaje)}
-        </div></div>
-        ${ec.tipoViaje !== 'vuelta' ? renderAsientoLeg('edit', 'ida', 'Asiento de ida') : ''}
-        ${ec.tipoViaje !== 'ida' ? renderAsientoLeg('edit', 'vuelta', 'Asiento de vuelta') : ''}
+        ${renderDiasSection('edit', ec, 'toggle-dia-edit')}
+        ${anyDiaNeedsLeg(ec, 'ida') ? renderAsientoLeg('edit', 'ida', 'Asiento de ida') : ''}
+        ${anyDiaNeedsLeg(ec, 'vuelta') ? renderAsientoLeg('edit', 'vuelta', 'Asiento de vuelta') : ''}
         <div class="field"><label>Estado</label><div class="seg">
           ${segOpt('edit', 'estado', 'pendiente', 'Pendiente', ec.estado)}
           ${segOpt('edit', 'estado', 'pagado', 'Pagado', ec.estado)}
@@ -767,7 +800,7 @@
           ${row('Email', esc(c.mail) || '—')}
           ${row('Teléfono', esc(c.telefono) || '—')}
           ${row('Fecha', fmtFecha(c.fecha))}
-          ${row('Tipo de viaje', tipoLabel(c.tipoViaje))}
+          ${row('Tipo de viaje', tipoLabel(summaryTipoViaje(c)))}
           ${row('Días y horarios', esc(horarioLineForContact(c)))}
         </div>
         ${c.activoTramos === false ? '<div class="text-muted" style="font-size:12px">No aparece en la pestaña Tramos.</div>' : ''}
@@ -848,9 +881,14 @@
   function toggleDia(obj, key) {
     const dias = obj.dias || (obj.dias = []);
     if (!obj.horarios) obj.horarios = {};
+    if (!obj.diasTipo) obj.diasTipo = {};
     const idx = dias.indexOf(key);
-    if (idx >= 0) { dias.splice(idx, 1); delete obj.horarios[key]; }
-    else { dias.push(key); obj.horarios[key] = obj.horarios[key] || { ida: '', vuelta: '' }; }
+    if (idx >= 0) { dias.splice(idx, 1); delete obj.horarios[key]; delete obj.diasTipo[key]; }
+    else {
+      dias.push(key);
+      obj.horarios[key] = obj.horarios[key] || { ida: '', vuelta: '' };
+      obj.diasTipo[key] = obj.diasTipo[key] || 'ambos';
+    }
   }
 
   function cloneAsientoLeg(a) {
@@ -867,6 +905,7 @@
     if (!c) return;
     state.editingContact = Object.assign({}, c, {
       dias: (c.dias || []).slice(),
+      diasTipo: Object.assign({}, c.diasTipo || {}),
       horarios: JSON.parse(JSON.stringify(c.horarios || {})),
       asientos: { ida: cloneAsientoLeg(c.asientos && c.asientos.ida), vuelta: cloneAsientoLeg(c.asientos && c.asientos.vuelta) }
     });
@@ -1280,7 +1319,7 @@
   function exportExcel() {
     const header = ['Nombre', 'Barrio', 'Tramos', 'Email', 'Teléfono', 'Monto abonado', 'Fecha', 'Viaje', 'Días y horarios', 'Estado'];
     const data = getFilteredSorted().map(c => [
-      c.nombre, c.barrio, c.tramos, c.mail, c.telefono, Number(c.monto) || 0, c.fecha || '', tipoLabel(c.tipoViaje), horarioLineForContact(c),
+      c.nombre, c.barrio, c.tramos, c.mail, c.telefono, Number(c.monto) || 0, c.fecha || '', tipoLabel(summaryTipoViaje(c)), horarioLineForContact(c),
       c.estado === 'pagado' ? 'Pagado' : 'Pendiente'
     ]);
     const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
@@ -1422,6 +1461,12 @@
       else if (scope === 'edit') state.editingContact[field] = value;
       else if (scope === 'filter' && field === 'tipo') state.filterTipo = value;
       else if (scope === 'tramosfiltro' && field === 'dia') { state.tramosFilterDia = value; state.tramosFilterHora = ''; }
+      render();
+    } else if (t.matches('input[data-action="seg-dia"]')) {
+      const scope = t.dataset.scope, dia = t.dataset.dia, value = t.value;
+      const obj = scope === 'form' ? state.form : state.editingContact;
+      if (!obj.diasTipo) obj.diasTipo = {};
+      obj.diasTipo[dia] = value;
       render();
     } else if (t.matches('input[data-action="set-accent-color"]')) {
       setAccentColor(t.value);
