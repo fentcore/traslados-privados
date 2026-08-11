@@ -1,4 +1,4 @@
-const CACHE_NAME = 'traslados-v5';
+const CACHE_NAME = 'traslados-v6';
 const APP_SHELL = ['/', '/styles.css', '/app.css', '/app.js', '/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
