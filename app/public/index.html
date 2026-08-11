@@ -150,6 +150,7 @@
   .section-title { font-size: clamp(24px, 3vw, 32px); margin: 0 0 24px; }
 
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(16px, 3vw, 24px); }
+  #horarios .grid-2 { align-items: start; }
   .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(16px, 3vw, 24px); }
   @media (max-width: 760px) {
     .grid-2, .grid-3 { grid-template-columns: 1fr; }
@@ -335,7 +336,7 @@
       <div class="card elev-md" style="gap: var(--space-3);">
         <div class="card-kicker">Salida</div>
         <div class="card-title">Salida de Puertos</div>
-        <p class="card-body">Parada del acceso a la colectora, Ruta 26.</p>
+        <p class="card-body">Parada en la puerta de cada barrio, sobre Ruta 26.</p>
         <div style="font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); font-weight: 600; margin-top: 6px;">Mediodía</div>
         <div class="route-list" id="salida-mediodia"></div>
         <div style="font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); font-weight: 600; margin-top: 12px;">Tarde</div>
@@ -431,7 +432,7 @@
                 <div class="van-tabs" id="van-tabs-ida"></div>
                 <div class="van-plan"><svg class="van-outline" viewBox="0 0 260 360" preserveAspectRatio="none" aria-hidden="true">
                   <path class="van-body" d="M75,0 L185,0 A75,75 0 0 1 260,75 L260,344 A16,16 0 0 1 244,360 L16,360 A16,16 0 0 1 0,344 L0,75 A75,75 0 0 1 75,0 Z"/>
-                  <path class="van-windshield" d="M16,88 Q130,68 244,88"/>
+                  <path class="van-windshield" d="M16,54 Q130,32 244,54"/>
                   <rect class="van-mirror" x="-12" y="62" width="12" height="24" rx="4"/>
                   <rect class="van-mirror" x="260" y="62" width="12" height="24" rx="4"/>
                 </svg>
@@ -451,7 +452,7 @@
                 <div class="van-tabs" id="van-tabs-regreso"></div>
                 <div class="van-plan"><svg class="van-outline" viewBox="0 0 260 360" preserveAspectRatio="none" aria-hidden="true">
                   <path class="van-body" d="M75,0 L185,0 A75,75 0 0 1 260,75 L260,344 A16,16 0 0 1 244,360 L16,360 A16,16 0 0 1 0,344 L0,75 A75,75 0 0 1 75,0 Z"/>
-                  <path class="van-windshield" d="M16,88 Q130,68 244,88"/>
+                  <path class="van-windshield" d="M16,54 Q130,32 244,54"/>
                   <rect class="van-mirror" x="-12" y="62" width="12" height="24" rx="4"/>
                   <rect class="van-mirror" x="260" y="62" width="12" height="24" rx="4"/>
                 </svg>
@@ -717,7 +718,7 @@
         '<div class="van-tabs" data-role="tabs"></div>' +
         '<div class="van-plan"><svg class="van-outline" viewBox="0 0 260 360" preserveAspectRatio="none" aria-hidden="true">' +
         '<path class="van-body" d="M75,0 L185,0 A75,75 0 0 1 260,75 L260,344 A16,16 0 0 1 244,360 L16,360 A16,16 0 0 1 0,344 L0,75 A75,75 0 0 1 75,0 Z"/>' +
-        '<path class="van-windshield" d="M16,88 Q130,68 244,88"/>' +
+        '<path class="van-windshield" d="M16,54 Q130,32 244,54"/>' +
         '<rect class="van-mirror" x="-12" y="62" width="12" height="24" rx="4"/>' +
         '<rect class="van-mirror" x="260" y="62" width="12" height="24" rx="4"/>' +
         '</svg><div class="van-plan-label">Frente</div><div class="van-seats" data-role="seats"></div></div>' +
