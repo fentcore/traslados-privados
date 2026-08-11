@@ -12,7 +12,12 @@
 
   const root = document.getElementById('root');
 
-  const emptyForm = () => ({ nombre: '', barrio: '', tramos: '', mail: '', telefono: '', monto: '', estado: 'pendiente', fecha: '', tipoViaje: 'ambos', dias: [], horarios: {} });
+  const emptyAsientoLeg = () => ({ horarioKey: '', seats: [], excOpen: false, exceptions: {} });
+  const emptyForm = () => ({
+    nombre: '', barrio: '', tramos: '', mail: '', telefono: '', monto: '', estado: 'pendiente', fecha: '',
+    tipoViaje: 'ambos', dias: [], horarios: {},
+    asientos: { ida: emptyAsientoLeg(), vuelta: emptyAsientoLeg() }
+  });
 
   const state = {
     screen: 'loading', // loading | auth | app
@@ -124,6 +129,119 @@
           </div>`;
         }).join('')}
       </div>
+    </div>`;
+  }
+
+  // ---------- seat picker (shared shape with the public landing page) ----------
+  function legPrefix(leg) { return leg === 'ida' ? 'ingreso' : 'salida'; }
+  function seatMapsFor(prefix) { return state.seatMaps.filter(m => m.horarioKey.indexOf(prefix) === 0); }
+  function seatMapByKey(key) { return state.seatMaps.find(m => m.horarioKey === key); }
+
+  function ensureFormAsientoDefaults() {
+    ['ida', 'vuelta'].forEach((leg) => {
+      const a = state.form.asientos[leg];
+      if (!a.horarioKey) {
+        const maps = seatMapsFor(legPrefix(leg));
+        if (maps.length) a.horarioKey = maps[0].horarioKey;
+      }
+    });
+  }
+
+  function vanOutlineSvg() {
+    return `<svg class="van-outline" viewBox="0 0 260 360" preserveAspectRatio="none" aria-hidden="true">
+      <path class="van-body" d="M75,0 L185,0 A75,75 0 0 1 260,75 L260,344 A16,16 0 0 1 244,360 L16,360 A16,16 0 0 1 0,344 L0,75 A75,75 0 0 1 75,0 Z"/>
+      <path class="van-windshield" d="M16,54 Q130,32 244,54"/>
+      <rect class="van-mirror" x="-12" y="62" width="12" height="24" rx="4"/>
+      <rect class="van-mirror" x="260" y="62" width="12" height="24" rx="4"/>
+    </svg>`;
+  }
+
+  function pickSeatButton(s, selectedIds, scope) {
+    const isSelected = selectedIds.includes(s.id);
+    const cls = ['seat'];
+    if (isSelected) cls.push('selected');
+    else if (s.occupied) cls.push('occupied');
+    const disabled = (s.occupied && !isSelected) ? 'disabled' : '';
+    return `<button type="button" class="${cls.join(' ')}" data-action="pick-seat" data-scope="${esc(scope)}" data-seat="${esc(s.id)}" ${disabled}>${esc(s.id)}</button>`;
+  }
+
+  function renderSeatPlan(map, selectedIds, scope) {
+    if (!map) return '<p class="text-muted" style="font-size:13px;margin:4px 0 0">Cargando asientos…</p>';
+    const byRow = {};
+    map.seats.forEach((s) => { (byRow[s.row] = byRow[s.row] || []).push(s); });
+    const rowNums = Object.keys(byRow).map(Number).sort((a, b) => a - b);
+    return `
+    <div class="van-plan">
+      ${vanOutlineSvg()}
+      <div class="van-plan-label">Frente</div>
+      <div class="van-seats">
+        ${rowNums.map((r) => `
+        <div class="van-row" data-row="${r}">
+          ${r === rowNums[0] ? '<div class="van-driver">Conductor</div>' : ''}
+          ${byRow[r].slice().sort((a, b) => a.col - b.col).map((s) => pickSeatButton(s, selectedIds, scope)).join('')}
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  function resolveAsientoTarget(scope) {
+    const [leg, dia] = scope.split(':');
+    const a = state.form.asientos[leg];
+    if (!a) return null;
+    if (!dia) return a;
+    return a.exceptions[dia] || null;
+  }
+
+  function renderAsientoLeg(leg, label) {
+    const f = state.form;
+    const a = f.asientos[leg];
+    const maps = seatMapsFor(legPrefix(leg));
+    if (!maps.length) {
+      return `<div class="field"><label>${esc(label)}</label><p class="text-muted" style="font-size:13px">Cargando horarios…</p></div>`;
+    }
+    const current = seatMapByKey(a.horarioKey);
+    const excDays = DIAS.filter((d) => (f.dias || []).includes(d.key));
+    return `
+    <div class="field">
+      <label>${esc(label)}</label>
+      <div class="van-tabs">
+        ${maps.map((m) => `<button type="button" data-action="pick-horario" data-scope="${leg}" data-key="${esc(m.horarioKey)}" class="${m.horarioKey === a.horarioKey ? 'active' : ''}">${esc(m.horarioLabel)}</button>`).join('')}
+      </div>
+      ${renderSeatPlan(current, a.seats, leg)}
+      <div class="van-legend">
+        <span><i class="van-dot free"></i>Libre</span>
+        <span><i class="van-dot selected"></i>Seleccionado</span>
+        <span><i class="van-dot occupied"></i>Ocupado</span>
+      </div>
+      ${excDays.length > 1 ? `
+      <button type="button" class="btn btn-ghost" data-action="toggle-asiento-exc" data-leg="${leg}" style="align-self:flex-start;font-size:13px;padding-left:0">
+        ${a.excOpen ? '– Ocultar asiento distinto por día' : '+ Asiento distinto algún día'}
+      </button>
+      ${a.excOpen ? renderAsientoExceptions(leg, excDays) : ''}` : ''}
+    </div>`;
+  }
+
+  function renderAsientoExceptions(leg, excDays) {
+    const f = state.form;
+    const a = f.asientos[leg];
+    const maps = seatMapsFor(legPrefix(leg));
+    return `
+    <div class="asiento-exceptions">
+      <div class="van-tabs">
+        ${excDays.map((d) => `<button type="button" data-action="toggle-exc-day" data-leg="${leg}" data-dia="${d.key}" class="${a.exceptions[d.key] ? 'active' : ''}">${esc(DIA_LABELS[d.key])}</button>`).join('')}
+      </div>
+      ${excDays.filter((d) => a.exceptions[d.key]).map((d) => {
+        const ex = a.exceptions[d.key];
+        const scope = leg + ':' + d.key;
+        return `
+        <div class="asiento-exception-day">
+          <div class="asiento-exception-day-title">${esc(DIA_LABELS[d.key])}</div>
+          <div class="van-tabs">
+            ${maps.map((m) => `<button type="button" data-action="pick-horario" data-scope="${scope}" data-key="${esc(m.horarioKey)}" class="${m.horarioKey === ex.horarioKey ? 'active' : ''}">${esc(m.horarioLabel)}</button>`).join('')}
+          </div>
+          ${renderSeatPlan(seatMapByKey(ex.horarioKey), ex.seats, scope)}
+        </div>`;
+      }).join('')}
     </div>`;
   }
 
@@ -260,6 +378,8 @@
           ${segOpt('form', 'tipoViaje', 'vuelta', 'Vuelta', f.tipoViaje)}
           ${segOpt('form', 'tipoViaje', 'ambos', 'Ambos', f.tipoViaje)}
         </div></div>
+        ${f.tipoViaje !== 'vuelta' ? renderAsientoLeg('ida', 'Asiento de ida') : ''}
+        ${f.tipoViaje !== 'ida' ? renderAsientoLeg('vuelta', 'Asiento de vuelta') : ''}
         <div class="field"><label>Estado</label><div class="seg">
           ${segOpt('form', 'estado', 'pendiente', 'Pendiente', f.estado)}
           ${segOpt('form', 'estado', 'pagado', 'Pagado', f.estado)}
@@ -358,8 +478,9 @@
         ${maps.map(m => `<button type="button" data-action="set-seatmap" data-key="${esc(m.horarioKey)}" class="${m.horarioKey === current.horarioKey ? 'active' : ''}">${esc(m.horarioLabel)}</button>`).join('')}
       </div>
       <div class="van-wrap">
-        <div class="van-plan blueprint">
-          ${corners()}
+        <div class="van-plan">
+          ${vanOutlineSvg()}
+          <div class="van-plan-label">Frente</div>
           <div class="van-seats">
             ${rowNums.map(r => `
             <div class="van-row" data-row="${r}">
@@ -702,15 +823,68 @@
     render();
   }
 
+  function handlePickHorario(scope, horarioKey) {
+    const target = resolveAsientoTarget(scope);
+    if (!target) return;
+    target.horarioKey = horarioKey;
+    target.seats = [];
+    render();
+  }
+
+  function handlePickSeat(scope, seatId) {
+    const target = resolveAsientoTarget(scope);
+    if (!target) return;
+    const idx = target.seats.indexOf(seatId);
+    if (idx >= 0) target.seats.splice(idx, 1); else target.seats.push(seatId);
+    render();
+  }
+
+  function toggleAsientoExceptionDay(leg, dia) {
+    const a = state.form.asientos[leg];
+    if (a.exceptions[dia]) delete a.exceptions[dia];
+    else a.exceptions[dia] = { horarioKey: a.horarioKey, seats: a.seats.slice() };
+    render();
+  }
+
+  async function markSeatOccupied(horarioKey, seatId) {
+    try {
+      const data = await api('/seats/' + encodeURIComponent(horarioKey) + '/seat/' + encodeURIComponent(seatId), {
+        method: 'PATCH',
+        body: JSON.stringify({ occupied: true })
+      });
+      state.seatMaps = state.seatMaps.map(m => m.horarioKey === data.seatMap.horarioKey ? data.seatMap : m);
+    } catch (err) { console.error(err); }
+  }
+
+  async function applyAsientoSelections(f) {
+    const jobs = [];
+    ['ida', 'vuelta'].forEach((leg) => {
+      const a = f.asientos[leg];
+      if (a.horarioKey && a.seats.length) {
+        a.seats.forEach((seatId) => jobs.push(markSeatOccupied(a.horarioKey, seatId)));
+      }
+      Object.keys(a.exceptions).forEach((dia) => {
+        const ex = a.exceptions[dia];
+        if (ex.horarioKey && ex.seats.length) {
+          ex.seats.forEach((seatId) => jobs.push(markSeatOccupied(ex.horarioKey, seatId)));
+        }
+      });
+    });
+    if (jobs.length) await Promise.all(jobs);
+  }
+
   async function handleNewContact() {
     state.formError = '';
     const f = state.form;
     if (!f.nombre || !f.nombre.trim()) { state.formError = 'El nombre es obligatorio.'; render(); return; }
     const payload = Object.assign({}, f, { nombre: f.nombre.trim(), barrio: (f.barrio || '').trim(), tramos: Number(f.tramos) || 0, monto: Number(f.monto) || 0 });
+    delete payload.asientos;
     try {
       const data = await api('/contacts', { method: 'POST', body: JSON.stringify(payload) });
+      await applyAsientoSelections(f);
       state.contacts = [data.contact, ...state.contacts];
       state.form = emptyForm();
+      ensureFormAsientoDefaults();
       state.savedFlash = true;
       render();
       setTimeout(() => { state.savedFlash = false; render(); }, 2200);
@@ -804,6 +978,7 @@
       const data = await api('/seats');
       state.seatMaps = data.seatMaps;
       if (!state.seatMapView && state.seatMaps.length) state.seatMapView = state.seatMaps[0].horarioKey;
+      ensureFormAsientoDefaults();
       render();
     } catch (err) { console.error(err); }
   }
@@ -946,6 +1121,10 @@
       case 'restore-tramos': setActivoTramos(btn.dataset.id, true); break;
       case 'set-seatmap': state.seatMapView = btn.dataset.key; render(); break;
       case 'toggle-seat': toggleSeat(btn.dataset.key, btn.dataset.seat, btn.dataset.occupied === '1'); break;
+      case 'pick-horario': handlePickHorario(btn.dataset.scope, btn.dataset.key); break;
+      case 'pick-seat': handlePickSeat(btn.dataset.scope, btn.dataset.seat); break;
+      case 'toggle-asiento-exc': { const a = state.form.asientos[btn.dataset.leg]; a.excOpen = !a.excOpen; render(); break; }
+      case 'toggle-exc-day': toggleAsientoExceptionDay(btn.dataset.leg, btn.dataset.dia); break;
       case 'sort': setSort(btn.dataset.key); break;
       case 'clear-date-filter': state.filterFrom = ''; state.filterTo = ''; render(); break;
       case 'clear-tramos-filter': state.tramosFilterDia = ''; state.tramosFilterHora = ''; render(); break;

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'traslados-admin-v4';
+const CACHE_NAME = 'traslados-admin-v5';
 const APP_SHELL = ['/admin/', '/admin/styles.css', '/admin/app.css', '/admin/app.js', '/admin/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
