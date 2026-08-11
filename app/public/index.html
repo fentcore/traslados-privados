@@ -219,14 +219,14 @@
   }
   .van-tabs button.active { background: var(--color-accent-soft); border-color: var(--color-accent); color: var(--color-accent); }
 
-  .van-plan { position: relative; width: min(260px, 100%); margin: 4px auto 0; padding: 34px 20px 20px; }
+  .van-plan { position: relative; width: min(260px, 100%); margin: 4px auto 0; padding: 58px 20px 20px; }
   .van-outline { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; overflow: visible; }
   .van-outline .van-body { fill: var(--color-bg-alt); stroke: var(--color-border-strong); stroke-width: 2; }
   .van-outline .van-windshield { fill: none; stroke: var(--color-border); stroke-width: 1.5; }
   .van-outline .van-mirror { fill: var(--color-surface-2); stroke: var(--color-border-strong); stroke-width: 1.5; }
   .van-plan-label {
-    position: relative; z-index: 1; text-align: center; font-size: 8.5px; letter-spacing: 0.18em;
-    color: var(--color-text-muted); font-weight: 600; margin-bottom: 16px;
+    position: absolute; top: 6px; left: 0; right: 0; z-index: 1; text-align: center; font-size: 8.5px; letter-spacing: 0.18em;
+    color: var(--color-text-muted); font-weight: 600;
   }
   .van-seats { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 8px; }
   .van-row { display: flex; gap: 8px; justify-content: center; }
@@ -336,7 +336,7 @@
       <div class="card elev-md" style="gap: var(--space-3);">
         <div class="card-kicker">Salida</div>
         <div class="card-title">Salida de Puertos</div>
-        <p class="card-body">Parada en la puerta de cada barrio, sobre Ruta 26.</p>
+        <p class="card-body">Parada en la puerta de cada barrio.</p>
         <div style="font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); font-weight: 600; margin-top: 6px;">Mediodía</div>
         <div class="route-list" id="salida-mediodia"></div>
         <div style="font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); font-weight: 600; margin-top: 12px;">Tarde</div>
