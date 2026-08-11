@@ -8,8 +8,8 @@
 </script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Andres Transport — Van compartida Ruta 26</title>
-<meta name="description" content="Van compartida puerta a puerta sobre Ruta 26, con horarios fijos de lunes a viernes. Reservá por WhatsApp.">
+<title>Andres Transport — Minibus compartido Ruta 26</title>
+<meta name="description" content="Minibus compartido puerta a puerta sobre Ruta 26, con horarios fijos de lunes a viernes. Reservá por WhatsApp.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
@@ -231,9 +231,11 @@
   .van-seats { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 8px; }
   .van-row { display: flex; gap: 8px; justify-content: center; }
   .van-row:not(:first-child) { padding-top: 8px; border-top: 1px dashed var(--color-border); }
+  .van-row[data-row="2"] { justify-content: flex-start; }
   .van-driver {
     width: 46px; aspect-ratio: 1; border-radius: var(--radius-sm); border: 1px dashed var(--color-border-strong);
     display: flex; align-items: center; justify-content: center; text-align: center; flex: none;
+    margin-right: 18px;
     font-family: var(--font-body); font-weight: 700; font-size: 8px;
     letter-spacing: 0.02em; text-transform: uppercase; color: var(--color-text-muted); padding: 2px;
   }
@@ -277,13 +279,13 @@
 <div style="max-width: 1200px; margin: 0 auto; padding: 0 clamp(20px, 5vw, 72px);">
 
   <section style="padding: 72px 0 8px;">
-    <span class="eyebrow">Van compartida — Ruta 26</span>
+    <span class="eyebrow">Minibus compartido — Ruta 26</span>
     <h1 style="font-size: clamp(38px, 6vw, 68px); letter-spacing: -0.02em; margin: 0 0 0 -0.03em;">
       <span style="display: block;">Tu viaje a Puertos,</span>
       <span style="display: block;">todos los días.</span>
     </h1>
     <p style="font-size: 16.5px; line-height: 1.7; max-width: 56ch; margin: 24px 0 0; color: var(--color-text-muted);">
-      Van compartida puerta a puerta sobre Ruta 26, con horarios fijos de lunes a viernes. Reservás tu lugar en minutos y viajás sin filas ni imprevistos.
+      Minibus compartido puerta a puerta sobre Ruta 26, con horarios fijos de lunes a viernes. Reservás tu lugar en minutos y viajás sin filas ni imprevistos.
     </p>
     <div style="display: flex; gap: var(--space-3); flex-wrap: wrap; margin-top: 28px;">
       <a href="#reserva" class="btn btn-primary">Reservar mi lugar</a>
@@ -372,6 +374,16 @@
                   <option>Vistas</option>
                   <option>Costas</option>
                 </select>
+              </div>
+            </div>
+            <div class="field" style="margin-top: 14px;">
+              <label>¿Qué días?</label>
+              <div class="seg" id="van-dias">
+                <button type="button" data-dia="lun">Lun</button>
+                <button type="button" data-dia="mar">Mar</button>
+                <button type="button" data-dia="mie">Mié</button>
+                <button type="button" data-dia="jue">Jue</button>
+                <button type="button" data-dia="vie">Vie</button>
               </div>
             </div>
           </div>
@@ -471,7 +483,7 @@
   </section>
 
   <footer style="padding: 28px 0 40px; font-size: 13px; line-height: 1.7; color: var(--color-text-muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--color-border);">
-    <span>Andres Transport — Servicio de van compartida, Ruta 26.</span>
+    <span>Andres Transport — Servicio de minibus compartido, Ruta 26.</span>
     <a href="/admin/">Acceso administrador</a>
   </footer>
 
@@ -504,12 +516,16 @@
     { barrio: 'Costas', mediodia: '13:00', tarde: '17:10' }
   ];
 
+  var DIA_LABELS = { lun: 'Lunes', mar: 'Martes', mie: 'Miércoles', jue: 'Jueves', vie: 'Viernes' };
+  var DIA_ORDER = ['lun', 'mar', 'mie', 'jue', 'vie'];
+
   var seatMaps = [];
   var tipoViaje = '';
   var currentIda = '';
   var currentRegreso = '';
   var selectedIda = new Set();
   var selectedRegreso = new Set();
+  var selectedDias = new Set();
 
   function esc(v) {
     return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
@@ -553,6 +569,9 @@
   function seatListText(set) {
     return Array.from(set).sort(function (a, b) { return Number(a) - Number(b); }).join(', ');
   }
+  function diasListText() {
+    return DIA_ORDER.filter(function (d) { return selectedDias.has(d); }).map(function (d) { return DIA_LABELS[d]; }).join(', ');
+  }
   function disableLink() {
     var linkEl = document.getElementById('van-reservar');
     linkEl.style.pointerEvents = 'none';
@@ -589,7 +608,7 @@
     el.innerHTML = rowNums.map(function (r) {
       var seatsInRow = byRow[r].slice().sort(function (a, b) { return a.col - b.col; });
       var driverHtml = r === rowNums[0] ? '<div class="van-driver">Conductor</div>' : '';
-      return '<div class="van-row">' + driverHtml + seatsInRow.map(function (s) { return seatButton(s, selSet); }).join('') + '</div>';
+      return '<div class="van-row" data-row="' + r + '">' + driverHtml + seatsInRow.map(function (s) { return seatButton(s, selSet); }).join('') + '</div>';
     }).join('');
   }
 
@@ -650,12 +669,13 @@
       disableLink();
       return;
     }
-    if (!nombre || !barrio) {
-      statusEl.textContent = 'Completá tu nombre y tu barrio para reservar.';
+    if (!nombre || !barrio || selectedDias.size === 0) {
+      statusEl.textContent = 'Completá tu nombre, tu barrio y los días para reservar.';
       disableLink();
       return;
     }
 
+    var diasText = diasListText();
     var summaryParts = [];
     var msgParts = [];
     if (needIda) {
@@ -673,11 +693,11 @@
       msgParts.push('Regreso "' + mapRegreso.horarioLabel + '"' + stopText + ', asiento(s) ' + seatsRegreso);
     }
 
-    statusEl.textContent = nombre + ' (' + barrio + ') — ' + summaryParts.join(' · ') + '.';
+    statusEl.textContent = nombre + ' (' + barrio + ') — Días: ' + diasText + ' — ' + summaryParts.join(' · ') + '.';
     linkEl.style.pointerEvents = 'auto';
     linkEl.style.opacity = '1';
     document.getElementById('step-summary').classList.add('is-active');
-    var msg = '¡Hola! Estoy interesad@ en contratar el servicio para "' + nombre + '" (barrio ' + barrio + '). Quiero reservar: ' + msgParts.join('; ') + '.';
+    var msg = '¡Hola! Estoy interesad@ en contratar el servicio para "' + nombre + '" (barrio ' + barrio + '). Días: ' + diasText + '. Quiero reservar: ' + msgParts.join('; ') + '.';
     linkEl.href = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(msg);
   }
 
@@ -689,6 +709,15 @@
       b.classList.toggle('active', b.dataset.tipo === tipoViaje);
     });
     showLegs();
+  });
+
+  document.getElementById('van-dias').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-dia]');
+    if (!btn) return;
+    var d = btn.dataset.dia;
+    if (selectedDias.has(d)) selectedDias.delete(d); else selectedDias.add(d);
+    btn.classList.toggle('active', selectedDias.has(d));
+    updateStatus();
   });
 
   document.getElementById('van-tabs-ida').addEventListener('click', function (e) {

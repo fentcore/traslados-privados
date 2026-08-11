@@ -350,7 +350,7 @@
           ${corners()}
           <div class="van-seats">
             ${rowNums.map(r => `
-            <div class="van-row">
+            <div class="van-row" data-row="${r}">
               ${r === rowNums[0] ? '<div class="van-driver">Conductor</div>' : ''}
               ${byRow[r].slice().sort((a, b) => a.col - b.col).map(s => seatButton(current.horarioKey, s)).join('')}
             </div>`).join('')}

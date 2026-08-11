@@ -112,9 +112,11 @@ body { background: var(--color-neutral-300); }
 .van-seats { display: flex; flex-direction: column; gap: 8px; }
 .van-row { display: flex; gap: 8px; justify-content: center; }
 .van-row:not(:first-child) { padding-top: 8px; border-top: 1px dashed var(--color-divider); }
+.van-row[data-row="2"] { justify-content: flex-start; }
 .van-driver {
   width: 44px; aspect-ratio: 1; border: 1px dashed color-mix(in srgb, var(--color-text) 55%, transparent);
   display: flex; align-items: center; justify-content: center; text-align: center; flex: none;
+  margin-right: 16px;
   font-family: var(--font-heading); font-weight: 600; font-size: 8px; letter-spacing: .02em;
   text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 55%, transparent); padding: 2px;
 }
