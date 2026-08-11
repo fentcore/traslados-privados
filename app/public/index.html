@@ -273,6 +273,10 @@
   .exception-row label { font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-muted); font-weight: 600; }
   .exception-row p { font-size: 13px; color: var(--color-text-muted); margin: 0; }
   .seg-sm button { padding: 8px 14px; font-size: 13px; }
+
+  .exception-day { display: flex; flex-direction: column; gap: var(--space-3); }
+  .exception-day + .exception-day { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px dashed var(--color-border); }
+  .exception-day-title { font-size: 13.5px; font-weight: 700; color: var(--color-text); }
 </style>
 </head>
 <body>
@@ -433,23 +437,13 @@
                 </svg>
                 <div class="van-plan-label">Frente</div><div class="van-seats" id="van-seats-ida"></div></div>
 
-                <button type="button" class="exception-toggle" id="ida-exception-toggle">+ Un día voy en otro horario</button>
+                <button type="button" class="exception-toggle" id="ida-exception-toggle">+ Elegir un horario de ingreso distinto por día</button>
                 <div class="exception-body" id="ida-exception-body" style="display: none;">
                   <div class="exception-row" id="ida-exception-dias-row">
-                    <label>¿Qué día vas distinto?</label>
+                    <label>¿Qué días tenés un horario distinto?</label>
                     <div class="seg seg-sm" id="ida-exception-dias"></div>
                   </div>
-                  <div class="exception-row">
-                    <label>¿A qué horario?</label>
-                    <div class="van-tabs" id="van-tabs-ida-alt"></div>
-                  </div>
-                  <div class="van-plan"><svg class="van-outline" viewBox="0 0 260 360" preserveAspectRatio="none" aria-hidden="true">
-                    <path class="van-body" d="M75,0 L185,0 A75,75 0 0 1 260,75 L260,344 A16,16 0 0 1 244,360 L16,360 A16,16 0 0 1 0,344 L0,75 A75,75 0 0 1 75,0 Z"/>
-                    <path class="van-windshield" d="M16,88 Q130,68 244,88"/>
-                    <rect class="van-mirror" x="-12" y="62" width="12" height="24" rx="4"/>
-                    <rect class="van-mirror" x="260" y="62" width="12" height="24" rx="4"/>
-                  </svg>
-                  <div class="van-plan-label">Frente</div><div class="van-seats" id="van-seats-ida-alt"></div></div>
+                  <div id="ida-exception-days"></div>
                 </div>
               </div>
               <div class="leg" id="leg-regreso">
@@ -463,23 +457,13 @@
                 </svg>
                 <div class="van-plan-label">Frente</div><div class="van-seats" id="van-seats-regreso"></div></div>
 
-                <button type="button" class="exception-toggle" id="regreso-exception-toggle">+ Un día vuelvo en otro horario</button>
+                <button type="button" class="exception-toggle" id="regreso-exception-toggle">+ Elegir un horario de regreso distinto por día</button>
                 <div class="exception-body" id="regreso-exception-body" style="display: none;">
                   <div class="exception-row" id="regreso-exception-dias-row">
-                    <label>¿Qué día volvés distinto?</label>
+                    <label>¿Qué días tenés un horario distinto?</label>
                     <div class="seg seg-sm" id="regreso-exception-dias"></div>
                   </div>
-                  <div class="exception-row">
-                    <label>¿A qué horario?</label>
-                    <div class="van-tabs" id="van-tabs-regreso-alt"></div>
-                  </div>
-                  <div class="van-plan"><svg class="van-outline" viewBox="0 0 260 360" preserveAspectRatio="none" aria-hidden="true">
-                    <path class="van-body" d="M75,0 L185,0 A75,75 0 0 1 260,75 L260,344 A16,16 0 0 1 244,360 L16,360 A16,16 0 0 1 0,344 L0,75 A75,75 0 0 1 75,0 Z"/>
-                    <path class="van-windshield" d="M16,88 Q130,68 244,88"/>
-                    <rect class="van-mirror" x="-12" y="62" width="12" height="24" rx="4"/>
-                    <rect class="van-mirror" x="260" y="62" width="12" height="24" rx="4"/>
-                  </svg>
-                  <div class="van-plan-label">Frente</div><div class="van-seats" id="van-seats-regreso-alt"></div></div>
+                  <div id="regreso-exception-days"></div>
                 </div>
               </div>
             </div>
@@ -573,13 +557,19 @@
   var selectedRegreso = new Set();
   var selectedDias = new Set();
 
-  var EXCEPTION_VERB = { ida: 'voy', regreso: 'vuelvo' };
+  var LEG_NOUN = { ida: 'ingreso', regreso: 'regreso' };
   var exceptions = {
-    ida: { open: false, dia: '', horario: '', seats: new Set() },
-    regreso: { open: false, dia: '', horario: '', seats: new Set() }
+    ida: { open: false, days: {} },
+    regreso: { open: false, days: {} }
   };
   function legPrefix(leg) { return leg === 'ida' ? 'ingreso' : 'salida'; }
   function currentForLeg(leg) { return leg === 'ida' ? currentIda : currentRegreso; }
+  function defaultSeatsForLeg(leg) { return leg === 'ida' ? selectedIda : selectedRegreso; }
+  function exceptionToggleLabel(leg, open) {
+    return open
+      ? '– Ocultar horarios de ' + LEG_NOUN[leg] + ' por día'
+      : '+ Elegir un horario de ' + LEG_NOUN[leg] + ' distinto por día';
+  }
 
   function esc(v) {
     return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
@@ -634,13 +624,7 @@
   }
 
   function renderLegTabs(prefix, currentKeyForLeg, containerId) {
-    var el = document.getElementById(containerId);
-    var barrio = getBarrio();
-    el.innerHTML = mapsFor(prefix).map(function (m) {
-      var stopTime = stopTimeFor(barrio, m.horarioKey);
-      var label = stopTime ? m.horarioLabel + ' · ' + stopTime + ' en ' + barrio : m.horarioLabel;
-      return '<button type="button" data-key="' + esc(m.horarioKey) + '" class="' + (m.horarioKey === currentKeyForLeg ? 'active' : '') + '">' + esc(label) + '</button>';
-    }).join('');
+    document.getElementById(containerId).innerHTML = tabsHtml(prefix, currentKeyForLeg);
   }
 
   function seatButton(s, selSet) {
@@ -652,8 +636,7 @@
     return '<button type="button" class="' + cls.join(' ') + '" data-seat="' + esc(s.id) + '" ' + disabled + '>' + esc(s.id) + '</button>';
   }
 
-  function renderLegSeats(key, selSet, containerId) {
-    var el = document.getElementById(containerId);
+  function renderSeatsInto(el, key, selSet) {
     var map = mapByKey(key);
     if (!map) { el.innerHTML = ''; return; }
     var byRow = {};
@@ -663,6 +646,19 @@
       var seatsInRow = byRow[r].slice().sort(function (a, b) { return a.col - b.col; });
       var driverHtml = r === rowNums[0] ? '<div class="van-driver">Conductor</div>' : '';
       return '<div class="van-row" data-row="' + r + '">' + driverHtml + seatsInRow.map(function (s) { return seatButton(s, selSet); }).join('') + '</div>';
+    }).join('');
+  }
+
+  function renderLegSeats(key, selSet, containerId) {
+    renderSeatsInto(document.getElementById(containerId), key, selSet);
+  }
+
+  function tabsHtml(prefix, currentKeyForLeg) {
+    var barrio = getBarrio();
+    return mapsFor(prefix).map(function (m) {
+      var stopTime = stopTimeFor(barrio, m.horarioKey);
+      var label = stopTime ? m.horarioLabel + ' · ' + stopTime + ' en ' + barrio : m.horarioLabel;
+      return '<button type="button" data-key="' + esc(m.horarioKey) + '" class="' + (m.horarioKey === currentKeyForLeg ? 'active' : '') + '">' + esc(label) + '</button>';
     }).join('');
   }
 
@@ -681,7 +677,7 @@
     updateStatus();
   }
 
-  function renderExceptionDias(leg) {
+  function renderExceptionDiaPicker(leg) {
     var el = document.getElementById(leg + '-exception-dias');
     var days = DIA_ORDER.filter(function (d) { return selectedDias.has(d); });
     if (!days.length) {
@@ -690,37 +686,52 @@
     }
     var exc = exceptions[leg];
     el.innerHTML = days.map(function (d) {
-      return '<button type="button" data-dia="' + esc(d) + '" class="' + (d === exc.dia ? 'active' : '') + '">' + esc(DIA_LABELS[d]) + '</button>';
+      return '<button type="button" data-dia="' + esc(d) + '" class="' + (exc.days[d] ? 'active' : '') + '">' + esc(DIA_LABELS[d]) + '</button>';
     }).join('');
   }
 
-  function selectExceptionHorario(leg, key) {
+  function renderExceptionDayContent(leg, dia) {
     var exc = exceptions[leg];
-    exc.horario = key;
-    exc.seats = new Set();
-    renderLegTabs(legPrefix(leg), exc.horario, 'van-tabs-' + leg + '-alt');
-    renderLegSeats(exc.horario, exc.seats, 'van-seats-' + leg + '-alt');
-    updateStatus();
+    var dayState = exc.days[dia];
+    if (!dayState) return;
+    if (!dayState.horario || !mapByKey(dayState.horario)) {
+      var altMaps = mapsFor(legPrefix(leg));
+      if (altMaps.length) {
+        var fallback = currentForLeg(leg);
+        dayState.horario = (fallback && mapByKey(fallback)) ? fallback : altMaps[0].horarioKey;
+      }
+    }
+    var dayEl = document.querySelector('#' + leg + '-exception-days .exception-day[data-dia="' + dia + '"]');
+    if (!dayEl) return;
+    dayEl.querySelector('[data-role="tabs"]').innerHTML = tabsHtml(legPrefix(leg), dayState.horario);
+    renderSeatsInto(dayEl.querySelector('[data-role="seats"]'), dayState.horario, dayState.seats);
   }
 
-  function ensureExceptionAltHorario(leg) {
+  function renderExceptionDays(leg) {
+    var container = document.getElementById(leg + '-exception-days');
     var exc = exceptions[leg];
-    if (exc.horario) return;
-    var altMaps = mapsFor(legPrefix(leg));
-    if (!altMaps.length) return;
-    var current = currentForLeg(leg);
-    var defaultAlt = altMaps.filter(function (m) { return m.horarioKey !== current; })[0] || altMaps[0];
-    selectExceptionHorario(leg, defaultAlt.horarioKey);
+    var days = DIA_ORDER.filter(function (d) { return exc.days[d]; });
+    container.innerHTML = days.map(function (d) {
+      return '<div class="exception-day" data-dia="' + esc(d) + '">' +
+        '<div class="exception-day-title">' + esc(DIA_LABELS[d]) + '</div>' +
+        '<div class="van-tabs" data-role="tabs"></div>' +
+        '<div class="van-plan"><svg class="van-outline" viewBox="0 0 260 360" preserveAspectRatio="none" aria-hidden="true">' +
+        '<path class="van-body" d="M75,0 L185,0 A75,75 0 0 1 260,75 L260,344 A16,16 0 0 1 244,360 L16,360 A16,16 0 0 1 0,344 L0,75 A75,75 0 0 1 75,0 Z"/>' +
+        '<path class="van-windshield" d="M16,88 Q130,68 244,88"/>' +
+        '<rect class="van-mirror" x="-12" y="62" width="12" height="24" rx="4"/>' +
+        '<rect class="van-mirror" x="260" y="62" width="12" height="24" rx="4"/>' +
+        '</svg><div class="van-plan-label">Frente</div><div class="van-seats" data-role="seats"></div></div>' +
+        '</div>';
+    }).join('');
+    days.forEach(function (d) { renderExceptionDayContent(leg, d); });
   }
 
   function closeException(leg) {
     var exc = exceptions[leg];
     exc.open = false;
-    exc.dia = '';
-    exc.horario = '';
-    exc.seats = new Set();
+    exc.days = {};
     document.getElementById(leg + '-exception-body').style.display = 'none';
-    document.getElementById(leg + '-exception-toggle').textContent = '+ Un día ' + EXCEPTION_VERB[leg] + ' en otro horario';
+    document.getElementById(leg + '-exception-toggle').textContent = exceptionToggleLabel(leg, false);
   }
 
   function buildLegSummary(leg, barrio) {
@@ -735,16 +746,23 @@
     var msg = label + ' "' + map.horarioLabel + '"' + stopText + ', asiento(s) ' + seats;
 
     var exc = exceptions[leg];
-    if (exc.open && exc.dia && exc.horario) {
-      var otherDiasText = DIA_ORDER.filter(function (d) { return selectedDias.has(d) && d !== exc.dia; }).map(function (d) { return DIA_LABELS[d]; }).join(', ');
-      var mapExc = mapByKey(exc.horario);
-      var seatsExc = seatListText(exc.seats);
-      var excStopTime = stopTimeFor(barrio, exc.horario);
-      var excStopText = excStopTime ? ' (parada en ' + barrio + ' ' + excStopTime + ')' : '';
-      var diasPrefix = otherDiasText ? ' los ' + otherDiasText + ';' : '';
-      var diasPrefixMsg = otherDiasText ? ' los días ' + otherDiasText + ',' : '';
-      summary += diasPrefix + ' el ' + DIA_LABELS[exc.dia] + ': ' + mapExc.horarioLabel + excStopText + ', asiento(s) ' + seatsExc;
-      msg += diasPrefixMsg + ' y el ' + DIA_LABELS[exc.dia] + ' es "' + mapExc.horarioLabel + '"' + excStopText + ', asiento(s) ' + seatsExc;
+    var exceptionDays = exc.open ? DIA_ORDER.filter(function (d) { return exc.days[d]; }) : [];
+    if (exceptionDays.length) {
+      var normalDaysText = DIA_ORDER.filter(function (d) { return selectedDias.has(d) && exceptionDays.indexOf(d) === -1; }).map(function (d) { return DIA_LABELS[d]; }).join(', ');
+      if (normalDaysText) {
+        summary += ' (los ' + normalDaysText + ')';
+        msg += ' (los días ' + normalDaysText + ')';
+      }
+      exceptionDays.forEach(function (d) {
+        var dayState = exc.days[d];
+        var mapExc = mapByKey(dayState.horario);
+        if (!mapExc) return;
+        var seatsExc = seatListText(dayState.seats);
+        var excStopTime = stopTimeFor(barrio, dayState.horario);
+        var excStopText = excStopTime ? ' (parada en ' + barrio + ' ' + excStopTime + ')' : '';
+        summary += ' · el ' + DIA_LABELS[d] + ': ' + mapExc.horarioLabel + excStopText + ', asiento(s) ' + seatsExc;
+        msg += '; el ' + DIA_LABELS[d] + ' es "' + mapExc.horarioLabel + '"' + excStopText + ', asiento(s) ' + seatsExc;
+      });
     }
     return { summary: summary, msg: msg };
   }
@@ -802,10 +820,14 @@
 
     var incompleteException = legsNeeded.some(function (leg) {
       var exc = exceptions[leg];
-      return exc.open && (!exc.dia || !exc.horario || exc.seats.size === 0);
+      if (!exc.open) return false;
+      return Object.keys(exc.days).some(function (d) {
+        var dayState = exc.days[d];
+        return !dayState.horario || dayState.seats.size === 0;
+      });
     });
     if (incompleteException) {
-      statusEl.textContent = 'Elegí el día, el horario y el asiento para tu excepción.';
+      statusEl.textContent = 'Elegí el horario y el asiento para cada día que marcaste como distinto.';
       disableLink();
       return;
     }
@@ -845,8 +867,11 @@
     btn.classList.toggle('active', selectedDias.has(d));
     ['ida', 'regreso'].forEach(function (leg) {
       var exc = exceptions[leg];
-      if (exc.dia && !selectedDias.has(exc.dia)) exc.dia = '';
-      if (exc.open) renderExceptionDias(leg);
+      Object.keys(exc.days).forEach(function (dd) { if (!selectedDias.has(dd)) delete exc.days[dd]; });
+      if (exc.open) {
+        renderExceptionDiaPicker(leg);
+        renderExceptionDays(leg);
+      }
     });
     updateStatus();
   });
@@ -858,9 +883,9 @@
       var body = document.getElementById(leg + '-exception-body');
       if (exc.open) {
         body.style.display = 'flex';
-        this.textContent = '– No ' + EXCEPTION_VERB[leg] + ' en otro horario';
-        renderExceptionDias(leg);
-        ensureExceptionAltHorario(leg);
+        this.textContent = exceptionToggleLabel(leg, true);
+        renderExceptionDiaPicker(leg);
+        renderExceptionDays(leg);
       } else {
         closeException(leg);
       }
@@ -870,26 +895,40 @@
     document.getElementById(leg + '-exception-dias').addEventListener('click', function (e) {
       var btn = e.target.closest('button[data-dia]');
       if (!btn) return;
-      exceptions[leg].dia = btn.dataset.dia;
-      renderExceptionDias(leg);
-      ensureExceptionAltHorario(leg);
-      updateStatus();
-    });
-
-    document.getElementById('van-tabs-' + leg + '-alt').addEventListener('click', function (e) {
-      var btn = e.target.closest('button[data-key]');
-      if (!btn) return;
-      selectExceptionHorario(leg, btn.dataset.key);
-    });
-
-    document.getElementById('van-seats-' + leg + '-alt').addEventListener('click', function (e) {
-      var btn = e.target.closest('button[data-seat]');
-      if (!btn || btn.disabled) return;
-      var id = btn.dataset.seat;
+      var dia = btn.dataset.dia;
       var exc = exceptions[leg];
-      if (exc.seats.has(id)) exc.seats.delete(id); else exc.seats.add(id);
-      renderLegSeats(exc.horario, exc.seats, 'van-seats-' + leg + '-alt');
+      if (exc.days[dia]) {
+        delete exc.days[dia];
+      } else {
+        exc.days[dia] = { horario: currentForLeg(leg), seats: new Set(Array.from(defaultSeatsForLeg(leg))) };
+      }
+      renderExceptionDiaPicker(leg);
+      renderExceptionDays(leg);
       updateStatus();
+    });
+
+    document.getElementById(leg + '-exception-days').addEventListener('click', function (e) {
+      var dayEl = e.target.closest('.exception-day');
+      if (!dayEl) return;
+      var dia = dayEl.dataset.dia;
+      var dayState = exceptions[leg].days[dia];
+      if (!dayState) return;
+
+      var tabBtn = e.target.closest('button[data-key]');
+      if (tabBtn) {
+        dayState.horario = tabBtn.dataset.key;
+        dayState.seats = new Set();
+        renderExceptionDayContent(leg, dia);
+        updateStatus();
+        return;
+      }
+      var seatBtn = e.target.closest('button[data-seat]');
+      if (seatBtn && !seatBtn.disabled) {
+        var id = seatBtn.dataset.seat;
+        if (dayState.seats.has(id)) dayState.seats.delete(id); else dayState.seats.add(id);
+        renderExceptionDayContent(leg, dia);
+        updateStatus();
+      }
     });
   });
 
@@ -925,10 +964,7 @@
   document.getElementById('van-barrio').addEventListener('change', function () {
     if (currentIda) renderLegTabs('ingreso', currentIda, 'van-tabs-ida');
     if (currentRegreso) renderLegTabs('salida', currentRegreso, 'van-tabs-regreso');
-    ['ida', 'regreso'].forEach(function (leg) {
-      var exc = exceptions[leg];
-      if (exc.open && exc.horario) renderLegTabs(legPrefix(leg), exc.horario, 'van-tabs-' + leg + '-alt');
-    });
+    ['ida', 'regreso'].forEach(function (leg) { if (exceptions[leg].open) renderExceptionDays(leg); });
     updateStatus();
   });
 
@@ -946,7 +982,7 @@
       if (tipoViaje) showLegs();
       if (currentIda) renderLegTabs('ingreso', currentIda, 'van-tabs-ida');
       if (currentRegreso) renderLegTabs('salida', currentRegreso, 'van-tabs-regreso');
-      ['ida', 'regreso'].forEach(function (leg) { if (exceptions[leg].open) ensureExceptionAltHorario(leg); });
+      ['ida', 'regreso'].forEach(function (leg) { if (exceptions[leg].open) renderExceptionDays(leg); });
       updateStatus();
     })
     .catch(function () {
