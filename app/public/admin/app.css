@@ -9,17 +9,8 @@ body { background: var(--color-bg-alt); }
   display: flex; flex-direction: column;
   box-shadow: var(--shadow-lg);
 }
-@media (min-width: 860px) {
-  body { padding: 32px 20px; }
-  .shell {
-    min-height: auto; max-width: 960px;
-    border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--color-border);
-  }
-  .shell.is-list { max-width: 1240px; }
-  /* The data-entry form stays a comfortable reading width even inside the
-     wider shell — full-width text inputs at 900px+ are awkward to scan. */
-  .view-pad > form.card { max-width: 640px; margin: 0 auto; width: 100%; }
-}
+.admin-body { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.admin-content { flex: 1; min-width: 0; }
 
 .app-nav {
   display: flex; align-items: center; gap: var(--space-3);
@@ -136,3 +127,38 @@ body { background: var(--color-bg-alt); }
 .van-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 6px; vertical-align: middle; }
 .van-dot.free { background: var(--color-surface-2); border: 1px solid var(--color-border); }
 .van-dot.occupied { background: transparent; border: 1px dashed var(--color-border-strong); }
+
+/* — desktop layout — placed last so it wins over the mobile rules above
+   it shares selectors with (equal specificity, later source wins). On a
+   real desktop screen the admin stops pretending to be a phone
+   screenshot: the nav goes edge-to-edge like the public site's, and the
+   tab bar becomes a sidebar next to a wide content panel — same 1200px
+   working width as the landing page, laid out like a proper dashboard
+   instead of one narrow column stretched taller. */
+@media (min-width: 860px) {
+  body { background: var(--color-bg); }
+  .shell { max-width: none; min-height: 100vh; box-shadow: none; }
+  .app-nav { padding: var(--space-3) clamp(20px, 5vw, 72px); }
+
+  .admin-body {
+    flex-direction: row; align-items: flex-start; gap: 40px;
+    max-width: 1200px; margin: 0 auto; width: 100%;
+    padding: 32px clamp(20px, 5vw, 72px) 60px;
+  }
+  .tab-bar {
+    flex: 0 0 220px; flex-direction: column; gap: 2px;
+    margin: 0; border-bottom: none;
+  }
+  .tab-bar button {
+    flex: none; text-align: left; padding: 11px 14px;
+    border: none; border-left: 2px solid transparent; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    margin-bottom: 0;
+  }
+  .tab-bar button.active { background: var(--color-accent-soft); border-left-color: var(--color-accent); }
+  .tab-bar button:hover:not(.active) { background: var(--color-surface-2); color: var(--color-text); }
+
+  .view-pad { padding: 0; }
+  /* The data-entry form stays a comfortable reading width even inside the
+     wider content panel — full-width text inputs at 700px+ are awkward to scan. */
+  .view-pad > form.card { max-width: 640px; margin: 0; width: 100%; }
+}

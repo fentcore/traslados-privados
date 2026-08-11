@@ -167,11 +167,15 @@
     <div class="shell ${listClass}">
       ${renderNav()}
       ${renderNotifBanner()}
-      ${renderTabs()}
-      ${state.view === 'form' ? renderFormView() : ''}
-      ${state.view === 'tramos' ? renderTramosView() : ''}
-      ${state.view === 'asientos' ? renderAsientosView() : ''}
-      ${state.view === 'list' ? renderListView() : ''}
+      <div class="admin-body">
+        ${renderTabs()}
+        <div class="admin-content">
+          ${state.view === 'form' ? renderFormView() : ''}
+          ${state.view === 'tramos' ? renderTramosView() : ''}
+          ${state.view === 'asientos' ? renderAsientosView() : ''}
+          ${state.view === 'list' ? renderListView() : ''}
+        </div>
+      </div>
     </div>
     ${state.editingContact ? renderEditDialog() : ''}
     ${state.deletingContact ? renderDeleteDialog() : ''}
