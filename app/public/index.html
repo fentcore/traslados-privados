@@ -219,13 +219,19 @@
   .van-tabs button.active { background: var(--color-accent-soft); border-color: var(--color-accent); color: var(--color-accent); }
 
   .van-plan {
-    width: min(300px, 100%); margin: 4px auto 0; border: 1px solid var(--color-border-strong);
-    border-radius: 44px 44px var(--radius-md) var(--radius-md); padding: 30px 16px 20px;
-    background: var(--color-bg-alt); position: relative;
+    width: min(280px, 100%); margin: 4px auto 0; border: 1px solid var(--color-border-strong);
+    border-radius: 60px 60px 20px 20px / 90px 90px 20px 20px;
+    padding: 34px 22px 22px; background: var(--color-bg-alt); position: relative;
   }
-  .van-plan::before {
-    content: 'FRENTE'; position: absolute; top: 10px; left: 0; right: 0; text-align: center;
-    font-size: 8.5px; letter-spacing: 0.18em; color: var(--color-text-muted); font-weight: 600;
+  .van-plan::before, .van-plan::after {
+    content: ''; position: absolute; top: 50px; width: 11px; height: 22px;
+    background: var(--color-surface-2); border: 1px solid var(--color-border-strong);
+  }
+  .van-plan::before { left: -10px; border-radius: 5px 0 0 5px; border-right: none; }
+  .van-plan::after { right: -10px; border-radius: 0 5px 5px 0; border-left: none; }
+  .van-plan-label {
+    text-align: center; font-size: 8.5px; letter-spacing: 0.18em; color: var(--color-text-muted);
+    font-weight: 600; margin-bottom: 16px;
   }
   .van-seats { display: flex; flex-direction: column; gap: 8px; }
   .van-row { display: flex; gap: 8px; justify-content: center; }
@@ -396,12 +402,12 @@
               <div class="leg" id="leg-ida">
                 <div class="leg-title"><span class="leg-num" id="leg-ida-num" style="display: none;">1</span>Ida — Ingreso a Puertos</div>
                 <div class="van-tabs" id="van-tabs-ida"></div>
-                <div class="van-plan"><div class="van-seats" id="van-seats-ida"></div></div>
+                <div class="van-plan"><div class="van-plan-label">Frente</div><div class="van-seats" id="van-seats-ida"></div></div>
               </div>
               <div class="leg" id="leg-regreso">
                 <div class="leg-title"><span class="leg-num" id="leg-regreso-num" style="display: none;">2</span>Regreso — Salida de Puertos</div>
                 <div class="van-tabs" id="van-tabs-regreso"></div>
-                <div class="van-plan"><div class="van-seats" id="van-seats-regreso"></div></div>
+                <div class="van-plan"><div class="van-plan-label">Frente</div><div class="van-seats" id="van-seats-regreso"></div></div>
               </div>
             </div>
             <div class="van-legend" style="margin-top: 4px;">
@@ -656,7 +662,7 @@
     linkEl.style.pointerEvents = 'auto';
     linkEl.style.opacity = '1';
     document.getElementById('step-summary').classList.add('is-active');
-    var msg = 'Hola! Soy ' + nombre + ', del barrio ' + barrio + '. Quiero reservar: ' + msgParts.join('; ') + '.';
+    var msg = '¡Hola! Estoy interesad@ en contratar el servicio para "' + nombre + '" (barrio ' + barrio + '). Quiero reservar: ' + msgParts.join('; ') + '.';
     linkEl.href = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(msg);
   }
 
