@@ -1,10 +1,8 @@
-// Kill switch: this file used to be the admin panel's service worker
-// (root scope, "/"). The panel now lives at /admin and registers its own
-// worker at /admin/service-worker.js. This one only exists so browsers that
-// still have the old root-scoped worker installed detect the byte change,
-// wipe every cache it created, and unregister themselves — instead of being
-// stuck forever serving stale cached pages from a script that would
-// otherwise just 404.
+// The admin app used to live at "/" and registered its service worker here,
+// scoped to the whole site. It moved to /admin/ with its own service worker.
+// This file now only exists to clean up that old root-scoped registration on
+// any device that installed it before the move, so it stops intercepting
+// requests to the new public landing page.
 self.addEventListener('install', () => self.skipWaiting());
 
 self.addEventListener('activate', (event) => {

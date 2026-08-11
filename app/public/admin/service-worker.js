@@ -1,5 +1,5 @@
-const CACHE_NAME = 'traslados-admin-v7';
-const APP_SHELL = ['/admin/', '/styles.css', '/admin/app.css', '/admin/app.js', '/admin/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png'];
+const CACHE_NAME = 'traslados-admin-v1';
+const APP_SHELL = ['/admin/', '/admin/styles.css', '/admin/app.css', '/admin/app.js', '/admin/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
@@ -28,14 +28,14 @@ self.addEventListener('push', (event) => {
     tag: data.tag || 'traslados',
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
-    data: { url: data.url || '/' }
+    data: { url: data.url || '/admin/' }
   };
   event.waitUntil(self.registration.showNotification(data.title || 'Traslados Privados', options));
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || '/';
+  const url = (event.notification.data && event.notification.data.url) || '/admin/';
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
       for (const client of clients) {

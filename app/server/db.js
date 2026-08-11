@@ -37,8 +37,8 @@ CREATE TABLE IF NOT EXISTS contacts (
   dias JSONB DEFAULT '[]'::jsonb,
   horario_ida TEXT DEFAULT '',
   horario_vuelta TEXT DEFAULT '',
-  horarios_dias JSONB DEFAULT '{}'::jsonb,
-  en_tramos BOOLEAN NOT NULL DEFAULT true,
+  horarios JSONB DEFAULT '{}'::jsonb,
+  activo_tramos BOOLEAN NOT NULL DEFAULT true,
   created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -46,8 +46,23 @@ CREATE TABLE IF NOT EXISTS contacts (
 
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS horario_ida TEXT DEFAULT '';
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS horario_vuelta TEXT DEFAULT '';
-ALTER TABLE contacts ADD COLUMN IF NOT EXISTS horarios_dias JSONB DEFAULT '{}'::jsonb;
-ALTER TABLE contacts ADD COLUMN IF NOT EXISTS en_tramos BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS horarios JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS activo_tramos BOOLEAN NOT NULL DEFAULT true;
+
+-- One-time migration from the columns' previous names (en_tramos / horarios_dias)
+-- and previous "renovar" estado value. Self-disabling: once the old columns are
+-- dropped below, the IF EXISTS guard is false on every later boot, so this never
+-- re-runs and can't clobber values the app sets afterward.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'contacts' AND column_name = 'en_tramos') THEN
+    UPDATE contacts SET activo_tramos = en_tramos, horarios = horarios_dias;
+    ALTER TABLE contacts DROP COLUMN en_tramos;
+    ALTER TABLE contacts DROP COLUMN horarios_dias;
+  END IF;
+END $$;
+
+UPDATE contacts SET estado = 'sin_tramos' WHERE estado = 'renovar';
 
 CREATE TABLE IF NOT EXISTS push_subscriptions (
   id SERIAL PRIMARY KEY,

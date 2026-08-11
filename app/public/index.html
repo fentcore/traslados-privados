@@ -3,31 +3,258 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Traslados Privados</title>
+<title>Andres Transport — Van compartida Ruta 26</title>
+<meta name="description" content="Van compartida puerta a puerta sobre Ruta 26, con horarios fijos de lunes a viernes. Reservá por WhatsApp.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="/styles.css">
-<meta name="theme-color" content="#5980a6">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 <link rel="icon" href="/icons/icon-192.png">
 <style>
-  body {
-    margin: 0; min-height: 100vh; background: var(--color-neutral-300);
-    display: flex; align-items: center; justify-content: center; padding: var(--space-4);
+  :root {
+    --color-bg: #f3f2f2;
+    --color-surface: #eae9e9;
+    --color-text: #201e1d;
+    --color-accent: #0088b0;
+    --color-accent-2: #d6006c;
+    --color-divider: color-mix(in srgb, #201e1d 16%, transparent);
+
+    --color-neutral-100: #f8f4f4;
+    --color-neutral-800: #444141;
+    --color-neutral-900: #2d2b2b;
+
+    --color-accent-100: #e9f8ff;
+    --color-accent-600: #1186ac;
+    --color-accent-700: #006786;
+    --color-accent-800: #004961;
+    --color-accent-900: #0a303e;
+
+    --color-accent-2-700: #aa0b56;
+
+    --font-heading: "Source Serif 4", system-ui, sans-serif;
+    --font-heading-weight: 600;
+    --font-body: "Source Serif 4", system-ui, sans-serif;
+
+    --space-1: 5px; --space-2: 10px; --space-3: 15px; --space-4: 20px; --space-6: 30px; --space-8: 40px;
+    --radius-sm: 1px; --radius-md: 2px; --radius-lg: 4px;
+    --shadow-sm: 0 1px 2px color-mix(in srgb, #2d2b2b 14%, transparent);
+    --shadow-md: 0 3px 10px color-mix(in srgb, #2d2b2b 16%, transparent);
+    --shadow-lg: 0 12px 32px color-mix(in srgb, #2d2b2b 22%, transparent);
   }
-  .home-card { width: min(420px, 100%); text-align: center; padding: var(--space-8) var(--space-6); background: var(--color-bg); }
-  .home-mark {
-    width: 56px; height: 56px; margin: 0 auto var(--space-4); border: 1px solid var(--color-accent);
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-heading); font-weight: 600; color: var(--color-accent); font-size: 26px;
+  * , *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); font-size: 15px; line-height: 1.55; text-wrap: pretty; }
+  html { scroll-behavior: smooth; }
+  h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: var(--font-heading-weight); line-height: 1.12; letter-spacing: -0.015em; margin: 0; }
+  a { color: var(--color-accent-700); text-decoration: none; text-underline-offset: 3px; }
+  a:hover { color: var(--color-accent-900); }
+  img { display: block; max-width: 100%; }
+  :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    cursor: pointer; text-decoration: none;
+    font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+    font-size: 14px; line-height: 1.2; color: var(--color-text);
+    background: transparent; border: 1px solid transparent;
+    padding: var(--space-2) calc(var(--space-3) * 1.2);
+    border-radius: var(--radius-md);
+  }
+  .btn-primary { background: var(--color-accent); color: #fff; }
+  .btn-primary:hover { background: var(--color-accent-600); color: #fff; }
+  .btn-primary:active { background: var(--color-accent-700); }
+  .btn-secondary { border-color: var(--color-divider); color: var(--color-text); }
+  .btn-secondary:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); color: var(--color-text); }
+  .btn-ghost { color: var(--color-accent); padding-inline: var(--space-1); }
+  .btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); color: var(--color-accent); }
+
+  .card { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface); }
+  .card-kicker { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); }
+  .card-title { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 17px; line-height: 1.2; }
+  .card-body { margin: 0; font-size: 13px; opacity: 0.8; flex: 1; }
+  .elev-sm { box-shadow: var(--shadow-sm); }
+  .elev-md { box-shadow: var(--shadow-md); }
+
+  .nav { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3) var(--space-4); }
+  .nav-brand { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 18px; margin-right: auto; }
+  .nav a { color: inherit; text-decoration: none; font-size: 14px; }
+  .nav a:not(.btn):hover { color: var(--color-accent); }
+  .nav-links { display: flex; align-items: center; gap: var(--space-4); }
+  @media (max-width: 720px) {
+    .nav-links > a:not(.btn) { display: none; }
+  }
+
+  details.card summary { list-style: none; }
+  details.card summary::-webkit-details-marker { display: none; }
+  details.card summary::after { content: '+'; float: right; font-family: var(--font-heading); color: var(--color-accent); }
+  details.card[open] summary::after { content: '−'; }
+
+  .schedule-row { display: flex; justify-content: space-between; font-size: 14.5px; padding: 6px 0; border-top: 1px solid var(--color-divider); }
+  .schedule-time { font-family: var(--font-heading); font-weight: var(--font-heading-weight); }
+  .eyebrow { display: block; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 70%, transparent); margin: 0 0 20px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(16px, 3vw, 28px); }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(16px, 3vw, 28px); }
+  @media (max-width: 720px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
   }
 </style>
 </head>
 <body>
-  <div class="card blueprint elev-md home-card">
-    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-    <div class="home-mark">T</div>
-    <h1 style="font-size:26px;margin-bottom:6px">Traslados Privados</h1>
-    <p class="text-muted" style="margin:0">Estamos armando esta página. Volvé pronto.</p>
+
+<nav class="nav" style="padding-inline: max(clamp(20px,5vw,72px), calc((100% - 1200px) / 2 + clamp(20px,5vw,72px)));">
+  <span class="nav-brand">Andres Transport</span>
+  <div class="nav-links">
+    <a href="#horarios">Horarios</a>
+    <a href="#precios">Precios</a>
+    <a href="#faq">Preguntas</a>
+    <a href="/admin/" class="btn btn-secondary">Admin</a>
+    <a href="https://wa.me/5491180371010" target="_blank" rel="noopener" class="btn btn-primary">Reservar</a>
   </div>
+</nav>
+
+<div style="max-width: 1200px; margin: 0 auto; padding: 0 clamp(20px, 5vw, 72px);">
+
+  <section style="padding: 88px 0 40px;">
+    <h1 style="font-size: clamp(42px, 6vw, 76px); letter-spacing: -0.02em; margin: 0 0 0 -0.035em;">
+      <span style="display: block;">Tu viaje a Puertos,</span>
+      <span style="display: block;">todos los días.</span>
+    </h1>
+    <p style="font-size: 17px; line-height: 28px; max-width: 58ch; margin: 32px 0 0; color: color-mix(in srgb, var(--color-text) 78%, transparent);">
+      Van compartida puerta a puerta sobre Ruta 26, con horarios fijos de lunes a viernes. Reservás tu lugar por WhatsApp y viajás sin filas ni imprevistos.
+    </p>
+    <div style="display: flex; gap: var(--space-3); flex-wrap: wrap; margin-top: 28px;">
+      <a href="https://wa.me/5491180371010" target="_blank" rel="noopener" class="btn btn-primary">Reservar por WhatsApp</a>
+      <a href="#horarios" class="btn btn-ghost">Ver horarios</a>
+    </div>
+  </section>
+
+  <hr style="height: 5px; border: 0; margin: 0; border-top: 2px solid var(--color-text); border-bottom: 1px solid var(--color-text);">
+  <p style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 14px 28px; margin: 0; padding: 14px 0; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 70%, transparent);">
+    <span>Ruta 26 — Puertos</span>
+    <span>Lunes a viernes</span>
+    <span>Duración ~15–20 min</span>
+    <span>Desde $4.000 el tramo</span>
+  </p>
+  <hr style="height: 0; border: 0; border-top: 1px solid var(--color-text); margin: 0 0 48px;">
+
+  <section id="horarios" style="margin: 0 0 40px;">
+    <span class="eyebrow">Horarios de salida</span>
+    <div class="grid-2">
+      <div class="card elev-sm" style="gap: var(--space-3);">
+        <div class="card-kicker">Ingreso</div>
+        <div class="card-title" style="font-size: 20px;">Ingreso a Puertos</div>
+        <p class="card-body" style="font-size: 14px; opacity: 0.9;">Parada frente al Banco Macro, Ruta 26.</p>
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
+          <div class="schedule-row"><span>Banco Macro, Ruta 26</span><span class="schedule-time">7:30</span></div>
+          <div class="schedule-row"><span>Banco Macro, Ruta 26</span><span class="schedule-time">8:20</span></div>
+        </div>
+      </div>
+      <div class="card elev-sm" style="gap: var(--space-3);">
+        <div class="card-kicker">Salida</div>
+        <div class="card-title" style="font-size: 20px;">Salida de Puertos</div>
+        <p class="card-body" style="font-size: 14px; opacity: 0.9;">Parada del acceso a la colectora, Ruta 26.</p>
+        <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); margin-top: 8px;">Mediodía</div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div class="schedule-row"><span>Riberas</span><span class="schedule-time">13:00</span></div>
+          <div class="schedule-row"><span>Ceibos / Marinas</span><span class="schedule-time">13:02</span></div>
+          <div class="schedule-row"><span>Nativas</span><span class="schedule-time">13:10</span></div>
+          <div class="schedule-row"><span>Muelles</span><span class="schedule-time">13:13</span></div>
+          <div class="schedule-row"><span>Acacias</span><span class="schedule-time">13:15</span></div>
+          <div class="schedule-row"><span>Araucarias</span><span class="schedule-time">13:17</span></div>
+          <div class="schedule-row"><span>Vistas</span><span class="schedule-time">13:20</span></div>
+        </div>
+        <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); margin-top: 12px;">Tarde</div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div class="schedule-row"><span>Riberas</span><span class="schedule-time">17:10</span></div>
+          <div class="schedule-row"><span>Ceibos / Marinas</span><span class="schedule-time">17:12</span></div>
+          <div class="schedule-row"><span>Nativas</span><span class="schedule-time">17:20</span></div>
+          <div class="schedule-row"><span>Muelles</span><span class="schedule-time">17:23</span></div>
+          <div class="schedule-row"><span>Acacias</span><span class="schedule-time">17:25</span></div>
+          <div class="schedule-row"><span>Araucarias</span><span class="schedule-time">17:27</span></div>
+          <div class="schedule-row"><span>Vistas</span><span class="schedule-time">17:30</span></div>
+        </div>
+      </div>
+    </div>
+    <p style="font-size: 13px; line-height: 24px; color: color-mix(in srgb, var(--color-text) 70%, transparent); margin: 20px 0 0;">Fuera de estos horarios no realizamos viajes — el servicio no opera fines de semana ni feriados.</p>
+  </section>
+
+  <hr style="height: 0; border: 0; border-top: 1px solid var(--color-divider); margin: 0 0 40px;">
+
+  <section id="precios" style="margin: 0 0 40px;">
+    <span class="eyebrow">Precios</span>
+    <div class="grid-3">
+      <div class="card elev-sm">
+        <div class="card-kicker">Individual</div>
+        <div class="card-title" style="font-size: 26px;">$4.000</div>
+        <p class="card-body">1 tramo — un solo recorrido, ida o vuelta.</p>
+      </div>
+      <div class="card elev-sm">
+        <div class="card-kicker">Promoción</div>
+        <div class="card-title" style="font-size: 26px;">$72.000</div>
+        <p class="card-body">Paquete de 20 tramos — $3.600 por tramo.</p>
+      </div>
+      <div class="card elev-sm">
+        <div class="card-kicker">Promoción</div>
+        <div class="card-title" style="font-size: 26px;">$108.000</div>
+        <p class="card-body">Paquete de 30 tramos — $3.600 por tramo.</p>
+      </div>
+    </div>
+    <p style="font-size: 14.5px; line-height: 24px; color: color-mix(in srgb, var(--color-text) 78%, transparent); margin: 20px 0 0; max-width: 58ch;">Un tramo equivale a un solo recorrido — no incluye ida y vuelta. Para confirmar la reserva alcanza con abonar y enviarnos el comprobante.</p>
+  </section>
+
+  <hr style="height: 0; border: 0; border-top: 1px solid var(--color-divider); margin: 0 0 40px;">
+
+  <section id="servicio" style="margin: 0 0 40px;">
+    <span class="eyebrow">Por qué viajar con nosotros</span>
+    <div class="grid-3">
+      <div class="card elev-sm">
+        <div class="card-title" style="font-size: 19px;">Puntualidad</div>
+        <p class="card-body">Salidas fijas todos los días. Si el horario dice 7:30, la van sale a las 7:30.</p>
+      </div>
+      <div class="card elev-sm">
+        <div class="card-title" style="font-size: 19px;">Puerta a puerta</div>
+        <p class="card-body">Paradas fijas sobre Ruta 26, cerca de tu punto de partida y de llegada.</p>
+      </div>
+      <div class="card elev-sm">
+        <div class="card-title" style="font-size: 19px;">Reserva directa</div>
+        <p class="card-body">Reservás por WhatsApp: enviás el comprobante y listo, sin intermediarios.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr style="height: 0; border: 0; border-top: 1px solid var(--color-divider); margin: 0 0 40px;">
+
+  <section id="faq" style="margin: 0 0 48px;">
+    <span class="eyebrow">Preguntas frecuentes</span>
+    <div class="grid-2">
+      <details class="card elev-sm" style="cursor: pointer;"><summary style="font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 16px; cursor: pointer;">¿Cuánto cuesta el tramo?</summary><p class="card-body" style="margin-top: 8px;">El valor de cada tramo es de $4.000. Descuento en paquetes de 20 ($72.000) y 30 tramos ($108.000). Un tramo es un solo recorrido — el regreso es un tramo adicional.</p></details>
+      <details class="card elev-sm" style="cursor: pointer;"><summary style="font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 16px; cursor: pointer;">¿Puedo contratar menos de 20 tramos?</summary><p class="card-body" style="margin-top: 8px;">Sí, también podés adquirir viajes individuales a $4.000 el tramo.</p></details>
+      <details class="card elev-sm" style="cursor: pointer;"><summary style="font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 16px; cursor: pointer;">¿Qué pasa si un día no viajo?</summary><p class="card-body" style="margin-top: 8px;">Si avisás con anticipación, el tramo no se pierde y queda disponible para otro día.</p></details>
+      <details class="card elev-sm" style="cursor: pointer;"><summary style="font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 16px; cursor: pointer;">¿Se pueden modificar los días de viaje?</summary><p class="card-body" style="margin-top: 8px;">Sí, avisando con anticipación para reorganizar la reserva y asegurar tu lugar.</p></details>
+      <details class="card elev-sm" style="cursor: pointer;"><summary style="font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 16px; cursor: pointer;">¿Se puede coordinar el viaje día por día?</summary><p class="card-body" style="margin-top: 8px;">Sí, avisando el día anterior para organizar la reserva.</p></details>
+      <details class="card elev-sm" style="cursor: pointer;"><summary style="font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 16px; cursor: pointer;">¿Cuánto tarda el viaje?</summary><p class="card-body" style="margin-top: 8px;">Generalmente entre 15 y 20 minutos, según el tránsito.</p></details>
+      <details class="card elev-sm" style="cursor: pointer;"><summary style="font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 16px; cursor: pointer;">¿Trabajan fines de semana o feriados?</summary><p class="card-body" style="margin-top: 8px;">Por el momento no — el servicio opera de lunes a viernes.</p></details>
+      <details class="card elev-sm" style="cursor: pointer;"><summary style="font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 16px; cursor: pointer;">¿Qué necesitan para reservar?</summary><p class="card-body" style="margin-top: 8px;">Nombre, punto de partida y destino, horario, cantidad de tramos y comprobante de pago.</p></details>
+      <details class="card elev-sm" style="cursor: pointer;"><summary style="font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 16px; cursor: pointer;">¿Cómo identifico el vehículo?</summary><p class="card-body" style="margin-top: 8px;">Te enviamos una foto del vehículo y los datos para identificarlo el día del viaje.</p></details>
+    </div>
+  </section>
+
+  <hr style="height: 0; border: 0; border-top: 1px solid var(--color-divider); margin: 0 0 48px;">
+
+  <section style="margin: 0 0 64px;">
+    <div class="card elev-md" style="align-items: flex-start; padding: clamp(24px, 4vw, 40px);">
+      <h3 style="font-size: 26px; letter-spacing: -0.015em;">Reservá tu viaje ahora</h3>
+      <p style="font-size: 15.5px; line-height: 26px; margin: 0; max-width: 58ch; color: color-mix(in srgb, var(--color-text) 78%, transparent);">Escribinos por WhatsApp con el día y horario — te confirmamos tu lugar al instante.</p>
+      <a href="https://wa.me/5491180371010" target="_blank" rel="noopener" class="btn btn-primary" style="margin-top: 8px;">WhatsApp +5491180371010</a>
+    </div>
+  </section>
+
+  <footer style="padding: 32px 0; font-size: 13px; line-height: 24px; color: color-mix(in srgb, var(--color-text) 70%, transparent); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--color-divider);">
+    <span>Andres Transport — Servicio de van compartida, Ruta 26.</span>
+    <a href="/admin/">Acceso administrador</a>
+  </footer>
+
+</div>
+
 </body>
 </html>

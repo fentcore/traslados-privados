@@ -9,15 +9,10 @@
     { key: 'vie', label: 'V' }
   ];
   const DIA_LABELS = { lun: 'Lun', mar: 'Mar', mie: 'Mié', jue: 'Jue', vie: 'Vie' };
-  const ESTADO_META = {
-    pendiente: { label: 'Pendiente', cls: 'status-pendiente' },
-    pagado: { label: 'Pagado', cls: 'status-pagado' },
-    renovar: { label: 'A renovar', cls: 'status-renovar' }
-  };
 
   const root = document.getElementById('root');
 
-  const emptyForm = () => ({ nombre: '', barrio: '', tramos: '', mail: '', telefono: '', monto: '', estado: 'pendiente', fecha: '', tipoViaje: 'ambos', dias: [], horarioIda: '', horarioVuelta: '', horariosDias: {} });
+  const emptyForm = () => ({ nombre: '', barrio: '', tramos: '', mail: '', telefono: '', monto: '', estado: 'pendiente', fecha: '', tipoViaje: 'ambos', dias: [], horarios: {} });
 
   const state = {
     screen: 'loading', // loading | auth | app
@@ -35,16 +30,15 @@
     filterFrom: '',
     filterTo: '',
     filterTipo: 'todos',
-    filterTramosDia: 'todos',
-    filterTramosHoraFrom: '',
-    filterTramosHoraTo: '',
+    tramosFilterDia: '',
+    tramosFilterHora: '',
     form: emptyForm(),
     formError: '',
     savedFlash: false,
     editingContact: null,
     deletingContact: null,
     viewingContact: null,
-    tramosZeroConfirm: null,
+    confirmZeroTramos: null,
     accountOpen: false,
     deferredInstallPrompt: null,
     pushState: 'unknown', // unknown | unsupported | default | denied | subscribed
@@ -109,6 +103,28 @@
     return `<label class="seg-opt"><input type="radio" name="${scope}-${field}" value="${value}" data-action="seg" data-scope="${scope}" data-field="${field}" ${checked}/>${label}</label>`;
   }
 
+  function horarioPorDia(scope, obj) {
+    const dias = obj.dias || [];
+    if (!dias.length) return '';
+    const path = scope === 'form' ? 'form.horarios' : 'editingContact.horarios';
+    const selected = DIAS.filter(d => dias.includes(d.key));
+    return `
+    <div class="field">
+      <label>Horario por día</label>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${selected.map(d => {
+          const h = (obj.horarios && obj.horarios[d.key]) || { ida: '', vuelta: '' };
+          return `
+          <div style="display:flex;gap:8px;align-items:center">
+            <span style="width:32px;font-size:12.5px;font-weight:600;flex-shrink:0">${DIA_LABELS[d.key]}</span>
+            <input type="time" class="input" data-bind="${path}.${d.key}.ida" value="${esc(h.ida)}" placeholder="Ida" style="flex:1;min-width:0" />
+            <input type="time" class="input" data-bind="${path}.${d.key}.vuelta" value="${esc(h.vuelta)}" placeholder="Vuelta" style="flex:1;min-width:0" />
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
   function renderLoading() {
     return '<div class="auth-wrap"><div class="text-muted">Cargando…</div></div>';
   }
@@ -157,8 +173,8 @@
     ${state.editingContact ? renderEditDialog() : ''}
     ${state.deletingContact ? renderDeleteDialog() : ''}
     ${state.viewingContact ? renderDetailDialog() : ''}
-    ${state.accountOpen ? renderAccountDialog() : ''}
-    ${state.tramosZeroConfirm ? renderTramosZeroDialog() : ''}`;
+    ${state.confirmZeroTramos ? renderConfirmZeroDialog() : ''}
+    ${state.accountOpen ? renderAccountDialog() : ''}`;
   }
 
   function renderNav() {
@@ -222,11 +238,7 @@
             ${DIAS.map(d => `<button type="button" class="day-circle ${f.dias.includes(d.key) ? 'active' : ''}" data-action="toggle-dia" data-key="${d.key}">${d.label}</button>`).join('')}
           </div>
         </div>
-        <div style="display:flex;gap:12px">
-          <div class="field" style="flex:1"><label>Horario de ida (general)</label><input id="f-horario-ida" type="time" class="input" data-bind="form.horarioIda" value="${esc(f.horarioIda)}" /></div>
-          <div class="field" style="flex:1"><label>Horario de vuelta (general)</label><input id="f-horario-vuelta" type="time" class="input" data-bind="form.horarioVuelta" value="${esc(f.horarioVuelta)}" /></div>
-        </div>
-        ${renderDiaSchedule('form', f)}
+        ${horarioPorDia('form', f)}
         <div class="field"><label>Tipo de viaje</label><div class="seg">
           ${segOpt('form', 'tipoViaje', 'ida', 'Ida', f.tipoViaje)}
           ${segOpt('form', 'tipoViaje', 'vuelta', 'Vuelta', f.tipoViaje)}
@@ -235,7 +247,7 @@
         <div class="field"><label>Estado</label><div class="seg">
           ${segOpt('form', 'estado', 'pendiente', 'Pendiente', f.estado)}
           ${segOpt('form', 'estado', 'pagado', 'Pagado', f.estado)}
-          ${segOpt('form', 'estado', 'renovar', 'A renovar', f.estado)}
+          ${segOpt('form', 'estado', 'sin_tramos', 'Sin tramos', f.estado)}
         </div></div>
         ${state.formError ? `<div class="error-msg">${esc(state.formError)}</div>` : ''}
         ${state.savedFlash ? '<div class="flash">Cliente guardado correctamente.</div>' : ''}
@@ -244,30 +256,31 @@
     </div>`;
   }
 
+  function horarioLineForContact(c) {
+    if (!c.dias || !c.dias.length) return 'Sin días asignados';
+    return DIAS.filter(d => c.dias.includes(d.key)).map(d => {
+      const h = (c.horarios && c.horarios[d.key]) || {};
+      const tiempo = (h.ida || h.vuelta) ? ` ${h.ida || '—'}/${h.vuelta || '—'}` : '';
+      return `${DIA_LABELS[d.key]}${tiempo}`;
+    }).join(' · ');
+  }
+
   function getTramosFiltered() {
-    let rows = state.contacts.filter(c => c.enTramos !== false);
-    const dia = state.filterTramosDia !== 'todos' ? state.filterTramosDia : '';
-    const from = state.filterTramosHoraFrom;
-    const to = state.filterTramosHoraTo;
-    if (dia) rows = rows.filter(c => (c.dias || []).includes(dia));
-    if (from || to) {
-      rows = rows.filter(c => {
-        const diasToCheck = dia ? [dia] : (c.dias || []);
-        if (!diasToCheck.length) return false;
-        return diasToCheck.some(d => {
-          const eff = horarioEfectivo(c, d);
-          const times = [eff.ida, eff.vuelta].filter(Boolean);
-          return times.some(t => (!from || t >= from) && (!to || t <= to));
+    let rows = state.contacts.filter(c => c.activoTramos !== false);
+    if (state.tramosFilterDia) {
+      rows = rows.filter(c => c.dias && c.dias.includes(state.tramosFilterDia));
+      if (state.tramosFilterHora) {
+        rows = rows.filter(c => {
+          const h = (c.horarios && c.horarios[state.tramosFilterDia]) || {};
+          return h.ida === state.tramosFilterHora || h.vuelta === state.tramosFilterHora;
         });
-      });
+      }
     }
     return rows;
   }
 
   function renderTramosView() {
     const rows = getTramosFiltered();
-    const totalEnTramos = state.contacts.filter(c => c.enTramos !== false).length;
-    const filterActive = state.filterTramosDia !== 'todos' || !!state.filterTramosHoraFrom || !!state.filterTramosHoraTo;
     return `
     <div class="view-pad">
       <div>
@@ -275,18 +288,14 @@
         <div class="text-muted" style="font-size:12.5px">Ajustá con + y − la cantidad de tramos contratados por cada cliente.</div>
       </div>
       <div class="filter-box">
-        <div class="filter-head">
-          <span>Filtrar por día y horario</span>
-          ${filterActive ? '<button type="button" data-action="clear-tramos-filter" class="btn btn-ghost" style="font-size:11.5px;padding:0">Quitar filtro</button>' : ''}
+        <div class="filter-head"><span>Filtrar por día y horario</span>
+          ${(state.tramosFilterDia || state.tramosFilterHora) ? '<button type="button" data-action="clear-tramos-filter" class="btn btn-ghost" style="font-size:11.5px;padding:0">Quitar filtro</button>' : ''}
         </div>
-        <div class="seg" style="align-self:stretch;flex-wrap:wrap">
-          ${segOpt('filterTramos', 'dia', 'todos', 'Todos', state.filterTramosDia)}
-          ${DIAS.map(d => segOpt('filterTramos', 'dia', d.key, DIA_LABELS[d.key], state.filterTramosDia)).join('')}
+        <div class="seg" style="align-self:stretch">
+          ${segOpt('tramosfiltro', 'dia', '', 'Todos', state.tramosFilterDia)}
+          ${DIAS.map(d => segOpt('tramosfiltro', 'dia', d.key, d.label, state.tramosFilterDia)).join('')}
         </div>
-        <div class="filter-row">
-          <div class="field"><label>Desde</label><input id="filter-tramos-from" type="time" class="input" data-bind="filterTramosHoraFrom" value="${esc(state.filterTramosHoraFrom)}" /></div>
-          <div class="field"><label>Hasta</label><input id="filter-tramos-to" type="time" class="input" data-bind="filterTramosHoraTo" value="${esc(state.filterTramosHoraTo)}" /></div>
-        </div>
+        ${state.tramosFilterDia ? `<div class="filter-row"><div class="field" style="flex:1"><label>Horario exacto (opcional)</label><input id="tramos-filter-hora" type="time" class="input" data-bind="tramosFilterHora" value="${esc(state.tramosFilterHora)}" /></div></div>` : ''}
       </div>
       <div style="display:flex;flex-direction:column;gap:8px">
         ${rows.map(c => `
@@ -294,7 +303,7 @@
           <div style="min-width:0">
             <div class="name">${esc(c.nombre)}</div>
             <div class="barrio">${esc(c.barrio)}</div>
-            <div class="text-muted" style="font-size:11.5px;margin-top:2px">${esc(diaHorarioResumen(c))}</div>
+            <div class="text-muted" style="font-size:11.5px;margin-top:2px">${esc(horarioLineForContact(c))}</div>
           </div>
           <div class="stepper">
             <button type="button" data-action="adjust-tramos" data-id="${c.id}" data-delta="-1">&minus;</button>
@@ -303,41 +312,7 @@
           </div>
         </div>`).join('')}
       </div>
-      ${rows.length === 0 ? `<div class="empty-note">${totalEnTramos === 0 ? 'Todavía no cargaste clientes.' : 'Ningún cliente coincide con el filtro.'}</div>` : ''}
-      ${renderTramosRemovedSection()}
-    </div>`;
-  }
-
-  function renderTramosRemovedSection() {
-    const removed = state.contacts.filter(c => c.enTramos === false);
-    if (!removed.length) return '';
-    return `
-    <div class="tramos-removed">
-      <div class="tramos-removed-title">Sacados de Tramos (siguen guardados en Contactos)</div>
-      ${removed.map(c => `
-      <div class="tramos-removed-row">
-        <div style="min-width:0">
-          <div class="name" style="font-size:13.5px;font-weight:500">${esc(c.nombre)}</div>
-          <div class="text-muted" style="font-size:11px">${esc(c.barrio)}</div>
-        </div>
-        <button type="button" class="btn btn-secondary" data-action="restore-to-tramos" data-id="${c.id}">Reactivar en Tramos</button>
-      </div>`).join('')}
-    </div>`;
-  }
-
-  function renderTramosZeroDialog() {
-    const c = state.tramosZeroConfirm;
-    return `
-    <div class="dialog-backdrop">
-      <div class="dialog blueprint">
-        ${corners()}
-        <div class="dialog-title">${esc(c.nombre)} llegó a 0 tramos</div>
-        <div class="dialog-body">¿Querés sacar a ${esc(c.nombre)} de la pestaña Tramos? Va a seguir guardado en Contactos, marcado como <strong>"A renovar"</strong>, y podés reactivarlo cuando quieras.</div>
-        <div class="dialog-actions">
-          <button type="button" data-action="keep-in-tramos" class="btn btn-secondary">Dejarlo en Tramos</button>
-          <button type="button" data-action="remove-from-tramos" data-id="${c.id}" class="btn btn-primary">Sacar de Tramos</button>
-        </div>
-      </div>
+      ${rows.length === 0 ? `<div class="empty-note">${state.contacts.length === 0 ? 'Todavía no cargaste clientes.' : 'No hay contactos que coincidan con el filtro.'}</div>` : ''}
     </div>`;
   }
 
@@ -361,45 +336,10 @@
   function fmtMoney(n) { return '$ ' + Number(n || 0).toLocaleString('es-AR'); }
   function fmtFecha(f) { return f ? f.split('-').reverse().join('/') : '—'; }
   function tipoLabel(v) { return v === 'ida' ? 'Ida' : v === 'vuelta' ? 'Vuelta' : 'Ambos'; }
-  function diasLabel(dias) { return (dias || []).map(d => DIA_LABELS[d] || d).join(', '); }
-
-  // Falls back to the contact's general horarioIda/horarioVuelta when a
-  // given day has no specific override saved.
-  function horarioEfectivo(c, dia) {
-    const override = c.horariosDias && c.horariosDias[dia];
-    return {
-      ida: (override && override.ida) || c.horarioIda || '',
-      vuelta: (override && override.vuelta) || c.horarioVuelta || ''
-    };
-  }
-
-  function diaHorarioResumen(c) {
-    if (!c.dias || !c.dias.length) return 'Sin días asignados';
-    return c.dias.map(d => {
-      const eff = horarioEfectivo(c, d);
-      const t = [eff.ida, eff.vuelta].filter(Boolean).join('/');
-      return DIA_LABELS[d] + (t ? ' ' + t : '');
-    }).join(' · ');
-  }
-
-  function renderDiaSchedule(scope, obj) {
-    const dias = obj.dias || [];
-    if (!dias.length) return '';
-    return `
-    <div class="field">
-      <label>Horarios por día (opcional — si lo dejás vacío se usa el horario general de arriba)</label>
-      <div class="dia-schedule">
-        ${dias.map(k => {
-          const entry = (obj.horariosDias && obj.horariosDias[k]) || { ida: '', vuelta: '' };
-          return `
-          <div class="dia-schedule-row">
-            <span class="dia-schedule-label">${DIA_LABELS[k]}</span>
-            <input type="time" class="input" data-bind="${scope}.horariosDias.${k}.ida" value="${esc(entry.ida)}" />
-            <input type="time" class="input" data-bind="${scope}.horariosDias.${k}.vuelta" value="${esc(entry.vuelta)}" />
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
+  function estadoInfo(estado) {
+    if (estado === 'pagado') return { label: 'Pagado', bg: 'var(--color-accent-100)', fg: 'var(--color-accent-800)' };
+    if (estado === 'sin_tramos') return { label: 'Sin tramos', bg: 'var(--color-accent-2-100)', fg: 'var(--color-accent-2-800)' };
+    return { label: 'Pendiente', bg: 'var(--color-neutral-100)', fg: 'var(--color-neutral-800)' };
   }
 
   function renderListView() {
@@ -453,16 +393,15 @@
           <tbody>
             ${rows.map(c => `
             <tr data-action="view-contact" data-id="${c.id}" style="cursor:pointer">
-              <td style="font-weight:500;white-space:nowrap">${esc(c.nombre)}${c.enTramos === false ? '<div class="text-muted" style="font-size:10px;font-weight:400">Fuera de Tramos</div>' : ''}</td>
+              <td style="font-weight:500;white-space:nowrap">${esc(c.nombre)}</td>
               <td style="white-space:nowrap">${esc(c.barrio)}</td>
               <td style="text-align:center">${c.tramos}</td>
               <td style="text-align:right;white-space:nowrap">${fmtMoney(c.monto)}</td>
               <td style="white-space:nowrap">${fmtFecha(c.fecha)}</td>
               <td style="white-space:nowrap">${tipoLabel(c.tipoViaje)}</td>
-              <td><span class="status-pill ${(ESTADO_META[c.estado] || ESTADO_META.pendiente).cls}" data-action="toggle-estado" data-id="${c.id}">${(ESTADO_META[c.estado] || ESTADO_META.pendiente).label}</span></td>
+              <td><span class="status-pill" data-action="toggle-estado" data-id="${c.id}" style="background:${estadoInfo(c.estado).bg};color:${estadoInfo(c.estado).fg}">${estadoInfo(c.estado).label}</span></td>
               <td><div class="row-actions">
                 <button type="button" class="edit" data-action="edit-contact" data-id="${c.id}">Editar</button>
-                ${c.enTramos === false ? `<button type="button" class="edit" data-action="restore-to-tramos" data-id="${c.id}">Reactivar tramos</button>` : ''}
                 <button type="button" class="delete" data-action="delete-contact" data-id="${c.id}">Eliminar</button>
               </div></td>
             </tr>`).join('')}
@@ -496,11 +435,7 @@
             ${DIAS.map(d => `<button type="button" class="day-circle ${(ec.dias || []).includes(d.key) ? 'active' : ''}" data-action="toggle-dia-edit" data-key="${d.key}">${d.label}</button>`).join('')}
           </div>
         </div>
-        <div style="display:flex;gap:12px">
-          <div class="field" style="flex:1"><label>Horario de ida (general)</label><input id="e-horario-ida" type="time" class="input" data-bind="editingContact.horarioIda" value="${esc(ec.horarioIda)}" /></div>
-          <div class="field" style="flex:1"><label>Horario de vuelta (general)</label><input id="e-horario-vuelta" type="time" class="input" data-bind="editingContact.horarioVuelta" value="${esc(ec.horarioVuelta)}" /></div>
-        </div>
-        ${renderDiaSchedule('editingContact', ec)}
+        ${horarioPorDia('edit', ec)}
         <div class="field"><label>Tipo de viaje</label><div class="seg">
           ${segOpt('edit', 'tipoViaje', 'ida', 'Ida', ec.tipoViaje)}
           ${segOpt('edit', 'tipoViaje', 'vuelta', 'Vuelta', ec.tipoViaje)}
@@ -509,7 +444,7 @@
         <div class="field"><label>Estado</label><div class="seg">
           ${segOpt('edit', 'estado', 'pendiente', 'Pendiente', ec.estado)}
           ${segOpt('edit', 'estado', 'pagado', 'Pagado', ec.estado)}
-          ${segOpt('edit', 'estado', 'renovar', 'A renovar', ec.estado)}
+          ${segOpt('edit', 'estado', 'sin_tramos', 'Sin tramos', ec.estado)}
         </div></div>
         ${state.formError ? `<div class="error-msg">${esc(state.formError)}</div>` : ''}
         <div class="dialog-actions">
@@ -532,28 +467,34 @@
           ${row('Barrio', esc(c.barrio) || '—')}
           ${row('Tramos', c.tramos)}
           ${row('Monto abonado', fmtMoney(c.monto))}
-          ${row('Estado', esc((ESTADO_META[c.estado] || ESTADO_META.pendiente).label))}
-          ${row('En pestaña Tramos', c.enTramos === false ? 'No' : 'Sí')}
+          ${row('Estado', estadoInfo(c.estado).label)}
           ${row('Email', esc(c.mail) || '—')}
           ${row('Teléfono', esc(c.telefono) || '—')}
           ${row('Fecha', fmtFecha(c.fecha))}
           ${row('Tipo de viaje', tipoLabel(c.tipoViaje))}
-          ${row('Horario general de ida', esc(c.horarioIda) || '—')}
-          ${row('Horario general de vuelta', esc(c.horarioVuelta) || '—')}
+          ${row('Días y horarios', esc(horarioLineForContact(c)))}
         </div>
-        ${c.dias && c.dias.length ? `
-        <div style="padding-top:6px">
-          <div class="text-muted" style="font-size:12px;margin-bottom:6px">Días y horarios de traslado</div>
-          <div style="display:flex;flex-direction:column;gap:3px">
-            ${c.dias.map(d => {
-              const eff = horarioEfectivo(c, d);
-              return `<div style="display:flex;justify-content:space-between;font-size:13.5px;padding:4px 0;border-bottom:1px solid var(--color-divider)"><span>${esc(DIA_LABELS[d])}</span><span style="font-weight:500">${esc(eff.ida) || '—'} / ${esc(eff.vuelta) || '—'}</span></div>`;
-            }).join('')}
-          </div>
-        </div>` : `<div class="text-muted" style="font-size:13px">Sin días asignados</div>`}
+        ${c.activoTramos === false ? '<div class="text-muted" style="font-size:12px">No aparece en la pestaña Tramos.</div>' : ''}
         <div class="dialog-actions">
           <button type="button" data-action="close-detail" class="btn btn-secondary">Cerrar</button>
+          ${c.activoTramos === false ? `<button type="button" data-action="restore-tramos" data-id="${c.id}" class="btn btn-secondary">Volver a Tramos</button>` : ''}
           <button type="button" data-action="edit-from-detail" data-id="${c.id}" class="btn btn-primary">Editar</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function renderConfirmZeroDialog() {
+    const c = state.confirmZeroTramos;
+    return `
+    <div class="dialog-backdrop">
+      <div class="dialog blueprint">
+        ${corners()}
+        <div class="dialog-title">${esc(c.nombre)} se quedó sin tramos</div>
+        <div class="dialog-body">¿Sacarlo de la pestaña Tramos? Va a seguir estando en Contactos, marcado como "Sin tramos".</div>
+        <div class="dialog-actions">
+          <button type="button" data-action="zero-tramos-keep" class="btn btn-secondary">No, dejarlo</button>
+          <button type="button" data-action="zero-tramos-remove" class="btn btn-primary">Sí, sacarlo</button>
         </div>
       </div>
     </div>`;
@@ -602,27 +543,16 @@
   // ---------- actions ----------
   function toggleDia(obj, key) {
     const dias = obj.dias || (obj.dias = []);
-    const horariosDias = obj.horariosDias || (obj.horariosDias = {});
+    if (!obj.horarios) obj.horarios = {};
     const idx = dias.indexOf(key);
-    if (idx >= 0) {
-      dias.splice(idx, 1);
-      delete horariosDias[key];
-    } else {
-      dias.push(key);
-      if (!horariosDias[key]) horariosDias[key] = { ida: '', vuelta: '' };
-    }
+    if (idx >= 0) { dias.splice(idx, 1); delete obj.horarios[key]; }
+    else { dias.push(key); obj.horarios[key] = obj.horarios[key] || { ida: '', vuelta: '' }; }
   }
 
   function openEdit(id) {
     const c = state.contacts.find(x => String(x.id) === String(id));
     if (!c) return;
-    const dias = (c.dias || []).slice();
-    const horariosDias = {};
-    dias.forEach(k => {
-      const src = (c.horariosDias && c.horariosDias[k]) || {};
-      horariosDias[k] = { ida: src.ida || '', vuelta: src.vuelta || '' };
-    });
-    state.editingContact = Object.assign({}, c, { dias, horariosDias });
+    state.editingContact = Object.assign({}, c, { dias: (c.dias || []).slice(), horarios: JSON.parse(JSON.stringify(c.horarios || {})) });
     state.formError = '';
     render();
   }
@@ -744,28 +674,43 @@
     try {
       const data = await api('/contacts/' + id + '/tramos', { method: 'PATCH', body: JSON.stringify({ delta }) });
       state.contacts = state.contacts.map(c => c.id === data.contact.id ? data.contact : c);
-      if (delta < 0 && data.contact.tramos === 0 && data.contact.enTramos !== false) {
-        state.tramosZeroConfirm = data.contact;
-      }
       render();
     } catch (err) { console.error(err); }
   }
 
-  async function removeFromTramos(id) {
-    try {
-      const data = await api('/contacts/' + id + '/en-tramos', { method: 'PATCH', body: JSON.stringify({ enTramos: false, estado: 'renovar' }) });
-      state.contacts = state.contacts.map(c => c.id === data.contact.id ? data.contact : c);
-      state.tramosZeroConfirm = null;
+  function handleTramosButton(id, delta) {
+    const c = state.contacts.find(x => String(x.id) === String(id));
+    if (!c) return;
+    if (delta < 0 && c.tramos + delta <= 0 && c.activoTramos !== false) {
+      state.confirmZeroTramos = c;
       render();
-    } catch (err) { console.error(err); }
+      return;
+    }
+    adjustTramos(id, delta);
   }
 
-  async function restoreToTramos(id) {
+  async function setActivoTramos(id, activo) {
     try {
-      const data = await api('/contacts/' + id + '/en-tramos', { method: 'PATCH', body: JSON.stringify({ enTramos: true }) });
+      const data = await api('/contacts/' + id + '/activo-tramos', { method: 'PATCH', body: JSON.stringify({ activo }) });
       state.contacts = state.contacts.map(c => c.id === data.contact.id ? data.contact : c);
-      render();
+      if (state.viewingContact && state.viewingContact.id === data.contact.id) state.viewingContact = data.contact;
     } catch (err) { console.error(err); }
+    render();
+  }
+
+  async function confirmZeroTramosRemove() {
+    const c = state.confirmZeroTramos;
+    state.confirmZeroTramos = null;
+    if (!c) return;
+    await adjustTramos(c.id, -1);
+    await setActivoTramos(c.id, false);
+  }
+
+  async function confirmZeroTramosKeep() {
+    const c = state.confirmZeroTramos;
+    state.confirmZeroTramos = null;
+    if (!c) return;
+    await adjustTramos(c.id, -1);
   }
 
   async function confirmDelete() {
@@ -788,13 +733,13 @@
   }
 
   function exportExcel() {
-    const header = ['Nombre', 'Barrio', 'Tramos', 'Email', 'Teléfono', 'Monto abonado', 'Fecha', 'Viaje', 'Días', 'Estado'];
+    const header = ['Nombre', 'Barrio', 'Tramos', 'Email', 'Teléfono', 'Monto abonado', 'Fecha', 'Viaje', 'Días y horarios', 'Estado'];
     const data = getFilteredSorted().map(c => [
-      c.nombre, c.barrio, c.tramos, c.mail, c.telefono, Number(c.monto) || 0, c.fecha || '', tipoLabel(c.tipoViaje), diasLabel(c.dias),
-      (ESTADO_META[c.estado] || ESTADO_META.pendiente).label
+      c.nombre, c.barrio, c.tramos, c.mail, c.telefono, Number(c.monto) || 0, c.fecha || '', tipoLabel(c.tipoViaje), horarioLineForContact(c),
+      c.estado === 'pagado' ? 'Pagado' : 'Pendiente'
     ]);
     const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
-    ws['!cols'] = [{ wch: 24 }, { wch: 18 }, { wch: 9 }, { wch: 26 }, { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 9 }, { wch: 18 }, { wch: 11 }];
+    ws['!cols'] = [{ wch: 24 }, { wch: 18 }, { wch: 9 }, { wch: 26 }, { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 9 }, { wch: 30 }, { wch: 11 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Contactos');
     XLSX.writeFile(wb, 'contactos_traslado.xlsx');
@@ -902,13 +847,13 @@
       case 'close-detail': state.viewingContact = null; render(); break;
       case 'edit-from-detail': state.viewingContact = null; openEdit(btn.dataset.id); break;
       case 'toggle-estado': toggleEstado(btn.dataset.id); break;
-      case 'adjust-tramos': adjustTramos(btn.dataset.id, Number(btn.dataset.delta)); break;
-      case 'keep-in-tramos': state.tramosZeroConfirm = null; render(); break;
-      case 'remove-from-tramos': removeFromTramos(btn.dataset.id); break;
-      case 'restore-to-tramos': restoreToTramos(btn.dataset.id); break;
+      case 'adjust-tramos': handleTramosButton(btn.dataset.id, Number(btn.dataset.delta)); break;
+      case 'zero-tramos-keep': confirmZeroTramosKeep(); break;
+      case 'zero-tramos-remove': confirmZeroTramosRemove(); break;
+      case 'restore-tramos': setActivoTramos(btn.dataset.id, true); break;
       case 'sort': setSort(btn.dataset.key); break;
       case 'clear-date-filter': state.filterFrom = ''; state.filterTo = ''; render(); break;
-      case 'clear-tramos-filter': state.filterTramosDia = 'todos'; state.filterTramosHoraFrom = ''; state.filterTramosHoraTo = ''; render(); break;
+      case 'clear-tramos-filter': state.tramosFilterDia = ''; state.tramosFilterHora = ''; render(); break;
       case 'export-excel': exportExcel(); break;
       case 'install-app': installApp(); break;
       case 'enable-push': enablePush(); break;
@@ -922,12 +867,12 @@
       if (scope === 'form') state.form[field] = value;
       else if (scope === 'edit') state.editingContact[field] = value;
       else if (scope === 'filter' && field === 'tipo') state.filterTipo = value;
-      else if (scope === 'filterTramos' && field === 'dia') state.filterTramosDia = value;
+      else if (scope === 'tramosfiltro' && field === 'dia') { state.tramosFilterDia = value; state.tramosFilterHora = ''; }
       render();
     }
   });
 
-  const NO_RERENDER_FIELDS = ['nombre', 'barrio', 'mail', 'telefono', 'tramos', 'monto', 'horarioIda', 'horarioVuelta', 'ida', 'vuelta'];
+  const NO_RERENDER_FIELDS = ['nombre', 'barrio', 'mail', 'telefono', 'tramos', 'monto', 'ida', 'vuelta'];
   root.addEventListener('input', (e) => {
     const bind = e.target.dataset.bind;
     if (!bind) return;
